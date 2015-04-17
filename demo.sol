@@ -1025,7 +1025,7 @@ end
 local MAX_PARTICLE_COUNT : int = 1024
 struct Particle
     local pos : @[3:float]
-    --local vel : @[3:float]
+    local vel : @[3:float]
     local target : @[3:float]
     local speed : float
 end
@@ -1034,13 +1034,23 @@ local PARTICLE_MODE_STATIC  : int = 0
 local PARTICLE_MODE_FOLLOW  : int = 1
 local PARTICLE_MODE_EXPLODE : int = 2
 
+local PARTICLE_FIGURE_CUBE   : int = 0
+local PARTICLE_FIGURE_SPHERE : int = 1
+
 struct ParticleSystem
     local mode : int
+    local next_mode : int
+    local figure : int
     local particle_buf : [@Particle]
+    local cool_down : float
 end
 
 
-local test_psys : ParticleSystem = ParticleSystem { mode = PARTICLE_MODE_STATIC }
+local test_psys : ParticleSystem = ParticleSystem {
+    next_mode = PARTICLE_MODE_STATIC,
+    mode = PARTICLE_MODE_STATIC,
+    figure = PARTICLE_FIGURE_CUBE,
+    cool_down = 0.0f }
 
 function init_meshy_cube()
     test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
@@ -1259,7 +1269,16 @@ function gen_sphere_particles( x : float, y : float, z : float, w : float, h : f
     end
 end
 
-function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, detla : float )
+function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
+
+    if (ps.cool_down > 0.0f) then
+        ps.cool_down = ps.cool_down - delta
+        if (ps.cool_down <= 0.0f) then
+            ps.cool_down = 0.0f
+
+            ps.mode = ps.next_mode
+        end
+    end
 
     -- update particles depending on mode
     if (ps.mode == PARTICLE_MODE_STATIC) then
@@ -1268,13 +1287,29 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, detla : float )
         local tv : [float] = [3:float]
         local i : int = 0
         while (i < MAX_PARTICLE_COUNT) do
-            tv[0] = 0.6f*detla*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
-            tv[1] = 0.6f*detla*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
-            tv[2] = 0.6f*detla*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
+            tv[0] = 0.6f*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
+            tv[1] = 0.6f*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
+            tv[2] = 0.6f*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
 
             ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + tv[0]
             ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + tv[1]
             ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + tv[2]
+
+            i = i + 1
+        end
+
+    elseif (ps.mode == PARTICLE_MODE_EXPLODE) then
+
+        local g = -0.9f * 10.0f
+
+        local i : int = 0
+        while (i < MAX_PARTICLE_COUNT) do
+
+            ps.particle_buf[i].vel[1] = ps.particle_buf[i].vel[1] + g * delta
+
+            ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + ps.particle_buf[i].vel[0]
+            ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + ps.particle_buf[i].vel[1]
+            ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + ps.particle_buf[i].vel[2]
 
             i = i + 1
         end
@@ -1622,8 +1657,10 @@ function run_floor()
 	local start_time = C.glfwGetTime();
 	local to_water:float = 0.0f;
     local water_t:float = 0.0f;
+	
 
 	local psyk_t:float = 0.0f;
+        local next_switch = 0u64;
 
 	while loop_begin() do
             local width  : [int] = [1:int]
@@ -1631,7 +1668,6 @@ function run_floor()
 
             local delta = C.glfwGetTime() - last_time_stamp
             last_time_stamp = C.glfwGetTime()
-
 
 			local tm:[@WrapUInt64] = [1:@WrapUInt64];
 			C.FMOD_Channel_GetPosition(music_channel, tm, 1u64);
@@ -1643,10 +1679,23 @@ function run_floor()
 				end
 			end
 
-			if tm[0].val > 26000u64 then
+			if tm[0].val > 25500u64 then
 				fixcompiler(psyk_t);
+				if psyk_t == 0.0f then
+					next_switch = 0u64;
+				end
 				psyk_t = psyk_t + float(delta)
 			end
+
+	    local do_switch = 0
+	    if tm[0].val > next_switch then
+		if psyk_t > 0.0f then
+			next_switch = tm[0].val + 10000u64
+		else
+			next_switch = tm[0].val + 3000u64
+		end
+		do_switch = 1
+	     end
 
             -- DO NOT REMOVE
             fixcompiler(water_t);
@@ -1701,16 +1750,48 @@ function run_floor()
 		move = 1.0f;
 	    end
 
-	    local dip_mtx = trans_mtx(sin(psyk_t)*move*200.0f,cos(psyk_t*3.0f) * 200.0f,cos(psyk_t*0.74f)*move*200.0f);
+	    local dip_mtx = trans_mtx(sin(psyk_t)*move*200.0f,cos(psyk_t*3.0f) * 200.0f - 50.0f,cos(psyk_t*0.74f)*move*200.0f);
 	    rot_mtx = mtx_mul(dip_mtx, rot_mtx);
 
-           if (to_water > 0.0f) then
-                test_psys.mode = PARTICLE_MODE_FOLLOW;
-		if (water_t > 3.0f) then
-	                gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            if water_t > 0.0f then
+
+                if (test_psys.mode == PARTICLE_MODE_STATIC) then
+                    test_psys.mode = PARTICLE_MODE_FOLLOW;
+                end
+
+                if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
+                    gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 		else
-	                gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                    gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                end
+
+		if do_switch == 1 then
+                    if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
+                            test_psys.figure = PARTICLE_FIGURE_SPHERE
+                    else
+                            test_psys.figure = PARTICLE_FIGURE_CUBE
+                    end
 		end
+
+
+                if (do_switch == 1 and psyk_t > 0.0f and test_psys.mode == PARTICLE_MODE_FOLLOW ) then
+                    test_psys.mode = PARTICLE_MODE_EXPLODE
+                    test_psys.cool_down = 3.0f
+                    test_psys.next_mode = PARTICLE_MODE_FOLLOW
+
+                    local i : int = 0
+                    local amp = 20.0f
+                    while (i < MAX_PARTICLE_COUNT) do
+                        local a1 = random() * 3.14f * 2.0f
+                        local a2 = random() * 3.14f * 2.0f
+
+                        test_psys.particle_buf[i].vel[0] = float(C.sin(double(a1))) * amp
+                        test_psys.particle_buf[i].vel[1] = float(C.cos(double(a1))) * amp
+                        test_psys.particle_buf[i].vel[2] = float(C.sin(double(a2))) * amp
+
+                        i = i + 1
+                    end
+                end
             end
 
             C.glUseProgram(particle_shader)
