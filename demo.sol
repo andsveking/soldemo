@@ -159,6 +159,7 @@ extern C
     function chdir(path : String) : int
     function rand() : int
     function sin(a : double) : double
+    function sqrt(a : double) : double
     function cos(a : double) : double
 
 end
@@ -1029,9 +1030,9 @@ struct Particle
     local speed : float
 end
 
-local PARTICLE_MODE_STATIC : int = 0
-local PARTICLE_MODE_FOLLOW : int = 1
--- local PARTICLE_MODE_FOLLOW = 0
+local PARTICLE_MODE_STATIC  : int = 0
+local PARTICLE_MODE_FOLLOW  : int = 1
+local PARTICLE_MODE_EXPLODE : int = 2
 
 struct ParticleSystem
     local mode : int
@@ -1039,7 +1040,7 @@ struct ParticleSystem
 end
 
 
-local test_psys : ParticleSystem = ParticleSystem { mode = PARTICLE_MODE_FOLLOW }
+local test_psys : ParticleSystem = ParticleSystem { mode = PARTICLE_MODE_STATIC }
 
 function init_meshy_cube()
     test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
@@ -1049,9 +1050,10 @@ function init_meshy_cube()
 
     local i : int = 0
     while (i < MAX_PARTICLE_COUNT) do
-        test_psys.particle_buf[i].pos[0] = 0.0f
-        test_psys.particle_buf[i].pos[1] = 0.0f
-        test_psys.particle_buf[i].pos[2] = 0.0f
+        local a : double = double(random() * 3.14f * 2.0f)
+        test_psys.particle_buf[i].pos[0] = float(C.cos(a)) * 2048.0f
+        test_psys.particle_buf[i].pos[1] = float(C.sin(a)) * 1048.0f + 1100.0f
+        test_psys.particle_buf[i].pos[2] = 2000.0f
 
         i = i + 1
     end
@@ -1232,29 +1234,30 @@ function gen_cube_particles( x : float, y : float, z : float, w : float, h : flo
 end
 
 
-function gen_haystack_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
+function gen_sphere_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
     local i:int = 0
-    local dt:float = 40.0f / float(MAX_PARTICLE_COUNT);
+    local dt:float = 3.1415f * 2.0f * 16.0f / float(MAX_PARTICLE_COUNT);
     while (i < MAX_PARTICLE_COUNT) do
 	local tmp:[float] = [4:float];
 	local t = float(i) * dt;
-	local w = C.sin(double(i) / double(MAX_PARTICLE_COUNT));
 	local s = C.sin(double(t));
 	local c = C.cos(double(t));
-	tmp[0] = float(s * 100.0 * w);
-	tmp[1] = 100.0f - 200.0f * float(i)/float(MAX_PARTICLE_COUNT);
-	tmp[2] = float(c * 100.0 * w);
+	local ly = 1.0f - 2.0f*float(i) / float(MAX_PARTICLE_COUNT);
+	local w = C.sqrt(1.0 - double(ly*ly));
+	tmp[0] = float(s * 100.0 * w) + x;
+	tmp[1] = 100.0f - 200.0f * float(i)/float(MAX_PARTICLE_COUNT) + y;
+	tmp[2] = float(c * 100.0 * w) + z;
+	tmp[3] = 1.0f;
 
-	tmp = vec_mul(mtx, tmp);
+	local tmp2:[float] = vec_mul(mtx, tmp);
 
-        ps.particle_buf[i].target[0] = tmp[0]
-        ps.particle_buf[i].target[1] = tmp[1]
-        ps.particle_buf[i].target[2] = tmp[2]
+        ps.particle_buf[i].target[0] = tmp2[0];
+        ps.particle_buf[i].target[1] = tmp2[1];
+        ps.particle_buf[i].target[2] = tmp2[2];
         i = i + 1
     end
 end
-
 
 function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, detla : float )
 
@@ -1563,6 +1566,13 @@ function floor_sim(src:int, dst:int)
     end
 end
 
+function sin(v:float):float
+	return float(C.sin(double(v)))
+end
+function cos(v:float):float
+	return float(C.cos(double(v)))
+end
+
 function run_floor()
 
 
@@ -1608,11 +1618,12 @@ function run_floor()
     local cur = 1
     local anim = 0.0f
 
-
 	local last_time_stamp = C.glfwGetTime();
 	local start_time = C.glfwGetTime();
 	local to_water:float = 0.0f;
     local water_t:float = 0.0f;
+
+	local psyk_t:float = 0.0f;
 
 	while loop_begin() do
             local width  : [int] = [1:int]
@@ -1630,6 +1641,11 @@ function run_floor()
 				if to_water > 1.0f then
 					to_water = 1.0f
 				end
+			end
+
+			if tm[0].val > 26000u64 then
+				fixcompiler(psyk_t);
+				psyk_t = psyk_t + float(delta)
 			end
 
             -- DO NOT REMOVE
@@ -1676,12 +1692,26 @@ function run_floor()
 
 
             -- particles
-            local imtx : [float] = ident_mtx()
-            local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f))
+            local imtx : [float] = ident_mtx();
+            local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f));
             -- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
 
---            gen_cube_particles(0.0f, 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
-            gen_haystack_particles(0.0f, 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+	    local move:float = psyk_t;
+	    if (move > 1.0f) then
+		move = 1.0f;
+	    end
+
+	    local dip_mtx = trans_mtx(sin(psyk_t)*move*200.0f,cos(psyk_t*3.0f) * 200.0f,cos(psyk_t*0.74f)*move*200.0f);
+	    rot_mtx = mtx_mul(dip_mtx, rot_mtx);
+
+           if (to_water > 0.0f) then
+                test_psys.mode = PARTICLE_MODE_FOLLOW;
+		if (water_t > 3.0f) then
+	                gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+		else
+	                gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+		end
+            end
 
             C.glUseProgram(particle_shader)
             scene_particle_draw(window, camera, 0.1)
