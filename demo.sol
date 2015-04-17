@@ -20,6 +20,10 @@ struct WrapPointer
     local ptr : uint64
 end
 
+struct WrapUInt64
+    local val : uint64
+end
+
 struct QuadBatch
     local vert_buf : [float]
     local uv_buf   : [float]
@@ -144,6 +148,7 @@ extern C
     function FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
     function FMOD_System_CreateSound(system : uint64, path : [byte], mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
     function FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
+	function FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
 
     -- C Std funcs
     function fopen( filename : [byte], mode : [byte] ) : uint64
@@ -874,6 +879,16 @@ function mtx_mul(a:[float], b:[float]) : [float]
     return mtx
 end
 
+function vec_mul(mtx:[float], vec:[float]) : [float]
+    local out : [float] = [4:float]
+	local k = 0
+	while k < 4 do
+		out[k] = mtx[4*k+0] * vec[0] + mtx[4*k+1] * vec[1] + mtx[4*k+2] * vec[2] + mtx[4*k+3] * vec[3];
+		k = k + 1;
+	end
+    return out
+end
+
 -- ugly LUT
 local lut_u : [float] = [16*16:float]
 local lut_v : [float] = [16*16:float]
@@ -1089,6 +1104,7 @@ struct HF
 end
 
 local floordata:[@HF] = [2:@HF];
+local music_channel:uint64;
 
 function gen_floor(qb:QuadBatch, gridsize:int)
     local u = 0
@@ -1147,17 +1163,6 @@ function run_floor()
 
     local t:float = 0.0f
 
-    local a=0
-    while a < 16 do
-        local b=0
-        while b < 16 do
-            floordata[0].heights[256*128+128+a+256*b] = 50.0f;
-            floordata[1].heights[256*128+128+a+256*b] = 50.0f;
-            b = b + 1
-        end
-        a = a + 1
-    end
-
 
     local htex = [1:uint32]
     C.glGenTextures(1, htex);
@@ -1169,10 +1174,30 @@ function run_floor()
 
     local cur = 1
 
+
+	local last_time_stamp = C.glfwGetTime();
+	local start_time = C.glfwGetTime();
+
+	local to_water:float = 0.0f;
+
 	while loop_begin() do
             local width  : [int] = [1:int]
             local height : [int] = [1:int]
-            
+
+            local delta = C.glfwGetTime() - last_time_stamp
+            last_time_stamp = C.glfwGetTime()
+
+	
+			local tm:[@WrapUInt64] = [1:@WrapUInt64];
+			C.FMOD_Channel_GetPosition(music_channel, tm, 1u64);            
+
+			if tm[0].val > 2000u64 then
+				to_water = to_water + (1.0f - to_water) * 3.0f * float(delta)
+				if to_water > 1.0f then
+					to_water = 1.0f
+				end
+			end
+
             C.glfwGetFramebufferSize( window, width, height )
             local widthf : float = float(width[0])
             local heightf : float = float(height[0])
@@ -1202,7 +1227,7 @@ function run_floor()
             end
 
             C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
-            C.glUniform1f(water_fade, 0.0f);
+            C.glUniform1f(water_fade, to_water);
 
 	        qb_render(fb)
             floor_sim(cur, 1 - cur)
@@ -1210,10 +1235,8 @@ function run_floor()
 
 	        local px:int = int(float(C.sin(double(2.0f*t))*64.0))+128;
 	        local py:int = int(float(C.cos(double(3.0f*t))*64.0))+128;
-
             local a=0
-
-            while a < 4 do
+            while a < 0 do
                 local b=0
                 while b < 4 do
                     floordata[cur].heights[(py+a)+256*(b+px)] = -10.0f;
@@ -1267,7 +1290,7 @@ function load_sound( fmod_system : uint64, path : String ) : uint64
     return sound_ptr
 end
 
-function play_sound( fmod_system : uint64, fmod_sound : uint64 )
+function play_sound( fmod_system : uint64, fmod_sound : uint64 ) : uint64
     local channel_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
     local res : uint64 = C.FMOD_System_PlaySound( fmod_system, -1, fmod_sound, false, channel_ptr_wrap)
     if (res ~= FMOD_OK) then
@@ -1275,6 +1298,7 @@ function play_sound( fmod_system : uint64, fmod_sound : uint64 )
 --        io.println(res)
         -- log_error("(" .. path .. ") could not create sound: " .. C.FMOD_ErrorString(res))
     end
+	return channel_ptr_wrap[0].ptr;
 end
 
 local line1 : String = "SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL"
@@ -1307,7 +1331,7 @@ function main(): int
         -- init audio and load sound
         local sound_system = init_audio()
         local drum_sound = load_sound( sound_system, "data/music/skadad.mp3" )
-        play_sound( sound_system, drum_sound )
+        music_channel = play_sound( sound_system, drum_sound )
 
         local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
         -- io.println("vertex_src: " .. vertex_src)
