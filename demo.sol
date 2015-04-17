@@ -129,6 +129,7 @@ extern C
         function glBindBuffer( target : uint32, buffer : uint32 )
         function glBindVertexArray( array : uint32 )
         function glBufferData( target : uint32, size : int, data : [float], usage : uint32)
+        function glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
         -- function glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
         function glDrawArrays( mode : uint32, first : uint32, count : int )
         function glEnableVertexAttribArray( index : int )
@@ -148,7 +149,7 @@ extern C
     function FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
     function FMOD_System_CreateSound(system : uint64, path : [byte], mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
     function FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
-	function FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
+    function FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
 
     -- C Std funcs
     function fopen( filename : [byte], mode : [byte] ) : uint64
@@ -159,6 +160,7 @@ extern C
     function chdir(path : String) : int
     function rand() : int
     function sin(a : double) : double
+    function sqrt(a : double) : double
     function cos(a : double) : double
 
 end
@@ -471,6 +473,32 @@ function create_texture( width : int, height : int, data : [byte] ) : uint32
     check_error("unbound texture", false )
 
     return texture
+end
+
+function create_mesh_from_file( path : String ) : uint32
+
+    local raw_data : [byte] = read_file( path )
+
+    io.println(#raw_data)
+
+    -- generate gl buffers
+    local buffers : [uint32] = [1:uint32]
+    C.glGenBuffers(1, buffers)
+    local vert_gl = buffers[0]
+
+    local vao : [uint32] = [1:uint32]
+    C.glGenVertexArrays( 1, vao )
+    local vao_obj = vao[0]
+
+    C.glBindVertexArray(vao_obj)
+    C.glEnableVertexAttribArray( 0 )
+    C.glBindBuffer( GL_ARRAY_BUFFER, vert_gl )
+    C.glBufferData( GL_ARRAY_BUFFER, #raw_data, raw_data, GL_STATIC_DRAW )
+    C.glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
+    C.glBindVertexArray(0u32)
+
+    return vao_obj
+
 end
 
 function create_quad_batch( capacity : int ) : QuadBatch
@@ -968,11 +996,11 @@ end
 
 function vec_mul(mtx:[float], vec:[float]) : [float]
     local out : [float] = [4:float]
-	local k = 0
-	while k < 4 do
-		out[k] = mtx[4*k+0] * vec[0] + mtx[4*k+1] * vec[1] + mtx[4*k+2] * vec[2] + mtx[4*k+3] * vec[3];
-		k = k + 1;
-	end
+    local k = 0
+    while k < 4 do
+        out[k] = mtx[4*k+0] * vec[0] + mtx[4*k+1] * vec[1] + mtx[4*k+2] * vec[2] + mtx[4*k+3] * vec[3];
+        k = k + 1;
+    end
     return out
 end
 
@@ -1084,7 +1112,7 @@ local PARTICLE_MODE_FOLLOW  : int = 1
 local PARTICLE_MODE_EXPLODE : int = 2
 
 local PARTICLE_FIGURE_CUBE   : int = 0
-local PARTICLE_FIGURE_SPIRAL : int = 1
+local PARTICLE_FIGURE_SPHERE : int = 1
 
 struct ParticleSystem
     local mode : int
@@ -1111,8 +1139,8 @@ function init_meshy_cube()
     while (i < MAX_PARTICLE_COUNT) do
         local a : double = double(random() * 3.14f * 2.0f)
         test_psys.particle_buf[i].pos[0] = float(C.cos(a)) * 2048.0f
-        test_psys.particle_buf[i].pos[1] = float(C.sin(a)) * 2048.0f
-        test_psys.particle_buf[i].pos[2] = 0.0f
+        test_psys.particle_buf[i].pos[1] = float(C.sin(a)) * 1048.0f + 1100.0f
+        test_psys.particle_buf[i].pos[2] = 2000.0f
 
         i = i + 1
     end
@@ -1247,13 +1275,21 @@ function gen_plus_side( x : float, y : float, z : float, w : float, h : float, d
 
 end
 
+--[[
 function gen_logo_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
     local rmtx : [float] = ident_mtx()
-    rmtx = mtx_mul(rmtx, mtx)
+
+    rmtx = ident_mtx()
+    rmtx = mtx_rotate_x(rmtx, 3.14/2.0)
+    rmtx = mtx_mul(mtx, rmtx)
     gen_plus_side( x, y, z, w, h, d, ps, 0, rmtx )
-    rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
+
+    rmtx = ident_mtx()
+    rmtx = mtx_rotate_x(rmtx, 3.14/2.0 * 2.0)
+    rmtx = mtx_mul(mtx, rmtx)
     gen_plus_side( x, y, z, w, h, d, ps, 4, rmtx )
+
     rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
     gen_plus_side( x, y, z, w, h, d, ps, 8, rmtx )
     rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
@@ -1276,6 +1312,7 @@ function gen_logo_particles( x : float, y : float, z : float, w : float, h : flo
     -- gen_plus_side( x, y, z, w, h, d, ps, 28, rmtx )
 
 end
+]]
 
 function gen_cube_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
@@ -1366,7 +1403,6 @@ function gen_cube_particles( x : float, y : float, z : float, w : float, h : flo
     v7[1] = v7[1] + y
     v7[2] = v7[2] + z
 
-
     local lines = 12
     local points_per_line = float(MAX_PARTICLE_COUNT) / float(lines)
 
@@ -1385,8 +1421,34 @@ function gen_cube_particles( x : float, y : float, z : float, w : float, h : flo
     gen_points_from_line( v1, v5, ppl_i, ps, ppl_i*9 )
 
     gen_points_from_line( v3, v7, ppl_i, ps, ppl_i*10 )
-    gen_points_from_line( v2, v6, ppl_i, ps, ppl_i*11 )
+    gen_points_from_line( v2, v6, MAX_PARTICLE_COUNT - ppl_i*11, ps, ppl_i*11 )
 
+end
+
+
+function gen_sphere_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
+
+    local i:int = 0
+    local dt:float = 3.1415f * 2.0f * 16.0f / float(MAX_PARTICLE_COUNT);
+    while (i < MAX_PARTICLE_COUNT) do
+    local tmp:[float] = [4:float];
+    local t = float(i) * dt;
+    local s = C.sin(double(t));
+    local c = C.cos(double(t));
+    local ly = 1.0f - 2.0f*float(i) / float(MAX_PARTICLE_COUNT);
+    local w = C.sqrt(1.0 - double(ly*ly));
+    tmp[0] = float(s * 100.0 * w) + x;
+    tmp[1] = 100.0f - 200.0f * float(i)/float(MAX_PARTICLE_COUNT) + y;
+    tmp[2] = float(c * 100.0 * w) + z;
+    tmp[3] = 1.0f;
+
+    local tmp2:[float] = vec_mul(mtx, tmp);
+
+        ps.particle_buf[i].target[0] = tmp2[0];
+        ps.particle_buf[i].target[1] = tmp2[1];
+        ps.particle_buf[i].target[2] = tmp2[2];
+        i = i + 1
+    end
 end
 
 function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
@@ -1508,6 +1570,7 @@ end
 
 local apa : String = "asd"
 local particle_shader : uint32
+local mesh_shader : uint32
 local particle_qb : QuadBatch
 -- local particle_mtx : [float] = ortho_mtx( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f)
 local particle_amount : int = 1024*10
@@ -1533,6 +1596,11 @@ function scene_particle_init()
     check_error("(particle) getting locations", false)
 
     particle_qb = create_quad_batch( particle_amount )
+
+
+    local vertex_mesh_src : String = read_file_as_string("data/shaders/mesh.vp")
+    mesh_shader = create_shader( vertex_mesh_src, fragment_src )
+    check_error("(mesh) create shader", false)
 
     init_meshy_cube()
 
@@ -1658,7 +1726,7 @@ function render( window : uint64, delta : double )
 end
 
 function loop_begin():bool
-	return C.glfwWindowShouldClose( window ) <= 0
+    return C.glfwWindowShouldClose( window ) <= 0
 end
 
 function loop_end()
@@ -1721,13 +1789,20 @@ function floor_sim(src:int, dst:int)
     end
 end
 
+function sin(v:float):float
+    return float(C.sin(double(v)))
+end
+function cos(v:float):float
+    return float(C.cos(double(v)))
+end
+
 function run_floor()
 
 
     scene_particle_init()
 
 
-	local fb : QuadBatch = create_quad_batch(1024*1024)
+    local fb : QuadBatch = create_quad_batch(1024*1024)
 
     local vertex_src : String = read_file_as_string("data/shaders/floor.vp")
     local fragment_src : String = read_file_as_string("data/shaders/floor.fp")
@@ -1766,29 +1841,49 @@ function run_floor()
     local cur = 1
     local anim = 0.0f
 
-
-	local last_time_stamp = C.glfwGetTime();
-	local start_time = C.glfwGetTime();
-	local to_water:float = 0.0f;
+    local last_time_stamp = C.glfwGetTime();
+    local start_time = C.glfwGetTime();
+    local to_water:float = 0.0f;
     local water_t:float = 0.0f;
 
-	while loop_begin() do
+
+    local psyk_t:float = 0.0f;
+        local next_switch = 0u64;
+
+    while loop_begin() do
             local width  : [int] = [1:int]
             local height : [int] = [1:int]
 
             local delta = C.glfwGetTime() - last_time_stamp
             last_time_stamp = C.glfwGetTime()
 
+            local tm:[@WrapUInt64] = [1:@WrapUInt64];
+            C.FMOD_Channel_GetPosition(music_channel, tm, 1u64);
 
-			local tm:[@WrapUInt64] = [1:@WrapUInt64];
-			C.FMOD_Channel_GetPosition(music_channel, tm, 1u64);
+            if tm[0].val > 12000u64 then
+                to_water = to_water + (1.0f - to_water) * 3.0f * float(delta)
+                if to_water > 1.0f then
+                    to_water = 1.0f
+                end
+            end
 
-			if tm[0].val > 12000u64 then
-				to_water = to_water + (1.0f - to_water) * 3.0f * float(delta)
-				if to_water > 1.0f then
-					to_water = 1.0f
-				end
-			end
+            if tm[0].val > 25500u64 then
+                fixcompiler(psyk_t);
+                if psyk_t == 0.0f then
+                    next_switch = 0u64;
+                end
+                psyk_t = psyk_t + float(delta)
+            end
+
+        local do_switch = 0
+        if tm[0].val > next_switch then
+        if psyk_t > 0.0f then
+            next_switch = tm[0].val + 10000u64
+        else
+            next_switch = tm[0].val + 3000u64
+        end
+        do_switch = 1
+         end
 
             -- DO NOT REMOVE
             fixcompiler(water_t);
@@ -1828,32 +1923,50 @@ function run_floor()
             C.glUniform1f(water_fade, to_water);
             C.glUniform1f(water_time, water_t);
 
-	        qb_render(fb)
+            qb_render(fb)
             floor_sim(cur, 1 - cur)
             cur = 1 - cur
 
 
             -- particles
-            local imtx : [float] = ident_mtx()
-            local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f))
+            local imtx : [float] = ident_mtx();
+            local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f));
             -- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
 
-            if (to_water > 0.0f) then
+        local move:float = psyk_t;
+        if (move > 1.0f) then
+        move = 1.0f;
+        end
+
+        local dip_mtx = trans_mtx(sin(psyk_t)*move*200.0f,cos(psyk_t*3.0f) * 200.0f - 50.0f,cos(psyk_t*0.74f)*move*200.0f);
+        rot_mtx = mtx_mul(dip_mtx, rot_mtx);
+
+            if water_t > 0.0f then
 
                 if (test_psys.mode == PARTICLE_MODE_STATIC) then
                     test_psys.mode = PARTICLE_MODE_FOLLOW;
                 end
+                    -- gen_logo_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
-                if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
+                --[[if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
                     -- gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
-                    gen_logo_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                else
+                    gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                end]]
+
+                if do_switch == 1 then
+                    if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
+                            test_psys.figure = PARTICLE_FIGURE_SPHERE
+                    else
+                            test_psys.figure = PARTICLE_FIGURE_CUBE
+                    end
                 end
 
-                if (int(t) % 10 == 0 and test_psys.mode == PARTICLE_MODE_FOLLOW ) then
+
+                if (do_switch == 1 and psyk_t > 0.0f and test_psys.mode == PARTICLE_MODE_FOLLOW ) then
                     test_psys.mode = PARTICLE_MODE_EXPLODE
                     test_psys.cool_down = 3.0f
                     test_psys.next_mode = PARTICLE_MODE_FOLLOW
-                    test_psys.figure = PARTICLE_FIGURE_CUBE
 
                     local i : int = 0
                     local amp = 20.0f
@@ -1868,7 +1981,6 @@ function run_floor()
                         i = i + 1
                     end
                 end
-
             end
 
             C.glUseProgram(particle_shader)
@@ -1878,8 +1990,8 @@ function run_floor()
                 test_psys.mode = PARTICLE_MODE_STATIC
             end
 
-	        local px:int = int(float(C.sin(double(2.0f*t))*64.0))+128;
-	        local py:int = int(float(C.cos(double(3.0f*t))*64.0))+128;
+            local px:int = int(float(C.sin(double(2.0f*t))*64.0))+128;
+            local py:int = int(float(C.cos(double(3.0f*t))*64.0))+128;
             local a=0
             while a < 0 do
                 local b=0
@@ -1891,12 +2003,29 @@ function run_floor()
             end
 
 
---            local p:int = 0;
---            while (p < MAX_PARTICLE_COUNT) do
---                    local pos:[float] = ps.particle_buf[p].pos;
---                    qb_add_3d( qb, ps.particle_buf[i].pos[0], ps.particle_buf[i].pos[1], ps.particle_buf[i].pos[0] + 10.0f, ps.particle_buf[i].pos[1] + 10.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
---                i = i + 1
---            end
+            local p:int = 0;
+            while (p < MAX_PARTICLE_COUNT) do
+                local pos:[3:float] = test_psys.particle_buf[p].pos;
+                if (pos[1] < 0.0f) and (pos[1] > -5.0f) then
+                    local x = (pos[0] + 256.0f) * 0.5f;
+                    local z = (pos[2] + 256.0f) * 0.5f;
+                    local y = pos[1];
+
+                    local PX = int(x);
+                    local PY = int(z);
+                    if PX > 0 and PX < 255 and PY > 0 and PY < 255 then
+                        floordata[cur].heights[PY*256+PX] = -15.0f;
+                    end
+                end
+                p = p + 1
+            end
+
+            C.glUseProgram(mesh_shader)
+            local mtxloc : uint32 = C.glGetUniformLocation( mesh_shader, "mtx".bytes )
+            C.glUniformMatrix4fv(mtxloc, 1, true, camera)
+            C.glBindVertexArray(mesh_vbo)
+            C.glDrawArrays( GL_TRIANGLES, 0u32, 48 );
+
 
 
             ----- TEXt
@@ -1941,8 +2070,8 @@ function run_floor()
             qb_render(text_qb);
 
             t = t + float(delta);
-	    loop_end()
-	end
+        loop_end()
+    end
 
     scene_particle_release()
 end
@@ -1994,12 +2123,14 @@ function play_sound( fmod_system : uint64, fmod_sound : uint64 ) : uint64
 --        io.println(res)
         -- log_error("(" .. path .. ") could not create sound: " .. C.FMOD_ErrorString(res))
     end
-	return channel_ptr_wrap[0].ptr;
+    return channel_ptr_wrap[0].ptr;
 end
 
 local line1 : String = "SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL"
 local line2 : String = "awesome scroller! check it... - leet haxxxx - very lua - much types"
 local line3 : String = "awesome scroller - check it"
+
+local mesh_vbo : uint32 = 0u32
 
 !main
 function main(): int
@@ -2046,6 +2177,9 @@ function main(): int
         qb_end( qb )
 
 
+        -- load logo mesh
+        mesh_vbo = create_mesh_from_file( "test" )
+
         local alt_text : QuadBatch = create_quad_batch( 1024 )
         qb_begin(alt_text)
         qb_text(alt_text, 160.0f-16.0f*5.5f , 5.0f, "DEFOLD CREW", 32.0f, 16.0f)
@@ -2067,8 +2201,8 @@ function main(): int
         -- init scenes
         -- scene_particle_init()
     -- run_particle_test()
-	run_floor()
-	return 1;
+    run_floor()
+    return 1;
 
 
         while C.glfwWindowShouldClose( window ) <= 0 do

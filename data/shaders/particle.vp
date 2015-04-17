@@ -8,7 +8,7 @@ uniform mat4 mtx;
 // uniform int mode;
 
 out vec2 uv0;
-
+out vec3 world;
 
 void main() {
     vec2 tpos = pos;
@@ -22,6 +22,7 @@ void main() {
     // }
 
     gl_Position = mtx * vec4(tpos, 0.0, 1.0);
+    world = tops;
     // gl_Position = mtx * vec4(pos, 0.0, 1.0);
     uv0 = uv;//(pos + 1.0) * 0.5;
 }
