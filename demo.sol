@@ -914,6 +914,33 @@ function mtx_mul(a:[float], b:[float]) : [float]
     return mtx
 end
 
+function mtx_rotate_X(Q : [float], angle : double) : [float]
+    io.println(angle)
+    local s : float = float(C.sin(angle));
+    local c : float = float(C.cos(angle));
+    local R : [float] = [16:float]
+
+    R[0] = 1.f;
+    R[1] = 0.f;
+    R[2] = 0.f;
+    R[3] = 0.f;
+    R[4] = 0.f;
+    R[5] =   c;
+    R[6] =   s;
+    R[7] = 0.f;
+    R[8] = 0.f;
+    R[9] =  -s;
+    R[10] =   c;
+    R[11] = 0.f;
+    R[12] = 0.f;
+    R[13] = 0.f;
+    R[14] = 0.f;
+    R[15] = 1.f;
+
+    return mtx_mul(R, Q)
+    -- return R
+end
+
 function vec_mul(mtx:[float], vec:[float]) : [float]
     local out : [float] = [4:float]
 	local k = 0
@@ -983,7 +1010,7 @@ end
 
 --------------------------------------------------------------
 -- particle meshes????
-local MAX_PARTICLE_COUNT : int = 64
+local MAX_PARTICLE_COUNT : int = 1024
 struct Particle
     local pos : @[3:float]
     --local vel : @[3:float]
@@ -1006,7 +1033,7 @@ local test_psys : ParticleSystem = ParticleSystem { mode = PARTICLE_MODE_FOLLOW 
 function init_meshy_cube()
     test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
 
-    gen_cube_particles( 0.0f, 0.0f, 0.0f, 200.0f, 200.0f, 200.0f, test_psys )
+    -- gen_cube_particles( 0.0f, 0.0f, 0.0f, 200.0f, 200.0f, 200.0f, test_psys )
     -- gen_square_points( 0.0f, 0.0f, 200.0f, 200.0f, test_psys, MAX_PARTICLE_COUNT )
 
     local i : int = 0
@@ -1082,53 +1109,70 @@ function gen_square_points( x : float, y : float, w : float, h : float, ps : Par
     -- return points
 end
 
-function gen_cube_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem )
+function gen_cube_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
     local wh : float = w / 2.0f
     local hh : float = h / 2.0f
     local dh : float = d / 2.0f
 
     -- verts
-    local v0 : [float] = [3:float]
-    local v1 : [float] = [3:float]
-    local v2 : [float] = [3:float]
-    local v3 : [float] = [3:float]
-    local v4 : [float] = [3:float]
-    local v5 : [float] = [3:float]
-    local v6 : [float] = [3:float]
-    local v7 : [float] = [3:float]
+    local v0 : [float] = [4:float]
+    local v1 : [float] = [4:float]
+    local v2 : [float] = [4:float]
+    local v3 : [float] = [4:float]
+    local v4 : [float] = [4:float]
+    local v5 : [float] = [4:float]
+    local v6 : [float] = [4:float]
+    local v7 : [float] = [4:float]
 
     v0[0] = x - wh
     v0[1] = y - hh
     v0[2] = z + dh
+    v0[3] = 1.0f
+    v0 = vec_mul(mtx, v0)
 
     v1[0] = x + wh
     v1[1] = y - hh
     v1[2] = z + dh
+    v1[3] = 1.0f
+    v1 = vec_mul(mtx, v1)
 
     v2[0] = x + wh
     v2[1] = y + hh
     v2[2] = z + dh
+    v2[3] = 1.0f
+    v2 = vec_mul(mtx, v2)
 
     v3[0] = x - wh
     v3[1] = y + hh
     v3[2] = z + dh
+    v3[3] = 1.0f
+    v3 = vec_mul(mtx, v3)
 
     v4[0] = x - wh
     v4[1] = y - hh
     v4[2] = z - dh
+    v4[3] = 1.0f
+    v4 = vec_mul(mtx, v4)
 
     v5[0] = x + wh
     v5[1] = y - hh
     v5[2] = z - dh
+    v5[3] = 1.0f
+    v5 = vec_mul(mtx, v5)
 
     v6[0] = x + wh
     v6[1] = y + hh
     v6[2] = z - dh
+    v6[3] = 1.0f
+    v6 = vec_mul(mtx, v6)
 
     v7[0] = x - wh
     v7[1] = y + hh
     v7[2] = z - dh
+    v7[3] = 1.0f
+    v7 = vec_mul(mtx, v7)
+
 
     local lines = 12
     local points_per_line = float(MAX_PARTICLE_COUNT) / float(lines)
@@ -1191,7 +1235,7 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, detla : float )
             zzz[2] = ps.particle_buf[i].pos[2]
             zzz[3] = ps.particle_buf[i].pos[2]
 
-            qb_add_3d( qb, ps.particle_buf[i].pos[0], ps.particle_buf[i].pos[1], ps.particle_buf[i].pos[0] + 10.0f, ps.particle_buf[i].pos[1] + 10.0f, 0.0f, 1.0f, 0.0f, 1.0f, zzz)
+            qb_add_3d( qb, ps.particle_buf[i].pos[0], ps.particle_buf[i].pos[1], ps.particle_buf[i].pos[0] + 10.0f, ps.particle_buf[i].pos[1] + 10.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
         i = i + 1
     end
     qb_end( qb )
@@ -1319,6 +1363,10 @@ function scene_particle_draw( window : uint64, mtx : [float], delta : double )
     local deltaf : float = float(delta)
     -- io.println(widthf)
     -- local particle_mtx = ortho_mtx( -widthf / 2.0f, widthf / 2.0f, -heightf / 2.0f, heightf / 2.0f, 0.0f, 1.0f)
+
+    C.glDisable( GL_DEPTH_TEST )
+    C.glEnable( GL_BLEND )
+    C.glBlendFunc( GL_ONE, GL_ONE )
 
     update_meshy_cube( test_psys, particle_qb, float(delta) )
 
@@ -1548,11 +1596,20 @@ function run_floor()
 
 
             -- particles
-            gen_cube_particles( float(C.sin(double(t))) * 100.0f, float(C.cos(double(t))) * 100.0f, 0.0f, 200.0f, 200.0f, 200.0f, test_psys )
+            local imtx : [float] = ident_mtx()
+            local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f))
+            -- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
+
+            gen_cube_particles( 100.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            -- gen_cube_particles( float(C.sin(double(t))) * 100.0f, float(C.cos(double(t))) * 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
             C.glUseProgram(particle_shader)
             C.glUniformMatrix4fv(particle_loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
             scene_particle_draw(window, mtx_mul(camera, floor_mtx()), 0.1)
+
+            if (C.glfwGetMouseButton(window, 0) == 1) then
+                test_psys.mode = PARTICLE_MODE_STATIC
+            end
 
 	        local px:int = int(float(C.sin(double(2.0f*t))*64.0))+128;
 	        local py:int = int(float(C.cos(double(3.0f*t))*64.0))+128;

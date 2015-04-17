@@ -38,5 +38,8 @@ void main() {
         fragColor = vec4(color.rgb * mixer.rgb, color.a * (offset / 6.0));
     }*/
     // fragColor = vec4(color.rgb * vec3(uv0, 1.0), color.a);
-    fragColor = vec4(uv0, 1.0, 1.0);
+    // fragColor = vec4(uv0, 1.0, 1.0);
+    vec2 p = uv0 * 2.0 - 1.0;
+    float d = 1.0 - length(p);
+    fragColor = vec4(d);
 }
