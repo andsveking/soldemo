@@ -1,0 +1,1 @@
+java -jar ../sol/compiler/build/libs/solc.jar demo.sol && llvm-gcc demo.o ../sol/runtime/build/dist/lib/x86_64-darwin/libsol-runtime.a io.o sol.o libs/libglfw3.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -o soldemo && ./soldemo
