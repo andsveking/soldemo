@@ -1109,7 +1109,7 @@ end
 
 function floor_sim(src:int, dst:int)
     local u = 1
-    local c2 = 12.0f
+    local c2 = 30.0f
 
     local s = floordata[src].heights
     local d = floordata[dst].heights
@@ -1123,7 +1123,7 @@ function floor_sim(src:int, dst:int)
 
             local f = c2 * (s[idx-1] + s[idx+1] + s[idx-floorsize] + s[idx+floorsize] - 4.0f * s[idx]);
             local vel = (s[idx] - d[idx])/dt + f * dt;
-            d[idx] = s[idx] + vel * dt;
+            d[idx] = 0.98f * (s[idx] + vel * dt);
 
             v = v + 1;
         end
@@ -1143,14 +1143,16 @@ function run_floor()
     local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx".bytes )
     check_error("(particle) getting locations", false)
 
+    local water_fade:int = C.glGetUniformLocation( floor_shader, "waterFade".bytes );
+
     local t:float = 0.0f
 
     local a=0
-    while a < 8 do
+    while a < 16 do
         local b=0
-        while b < 8 do
-            floordata[0].heights[256*128+128+a+256*b] = 20.0f;
-            floordata[1].heights[256*128+128+a+256*b] = 20.0f;
+        while b < 16 do
+            floordata[0].heights[256*128+128+a+256*b] = 50.0f;
+            floordata[1].heights[256*128+128+a+256*b] = 50.0f;
             b = b + 1
         end
         a = a + 1
@@ -1186,10 +1188,10 @@ function run_floor()
             
             local fov = 2.0f
             local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 300.0f)
-            local camera = mtx_mul(persp, trans_mtx(0.0f, -50.0f + 0.0f * float(C.sin(double(t))), -200.0f))
+            local camera = mtx_mul(persp, trans_mtx(0.0f, -60.0f, -200.0f))
 
             C.glUseProgram(floor_shader)
-            C.glUniformMatrix4fv(loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
+            C.glUniformMatrix4fv(loc_mtx, 1, true, camera)
 
             -- convert & scale heights
             local texdata : [float] = [65536:float]
@@ -1200,10 +1202,26 @@ function run_floor()
             end
 
             C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
+            C.glUniform1f(water_fade, 0.0f);
 
-	    qb_render(fb)
+	        qb_render(fb)
             floor_sim(cur, 1 - cur)
             cur = 1 - cur
+
+	        local px:int = int(float(C.sin(double(2.0f*t))*64.0))+128;
+	        local py:int = int(float(C.cos(double(3.0f*t))*64.0))+128;
+
+            local a=0
+
+            while a < 4 do
+                local b=0
+                while b < 4 do
+                    floordata[cur].heights[(py+a)+256*(b+px)] = -10.0f;
+                    b = b + 1
+                end
+                a = a + 1
+            end
+
 
             t = t + 0.01f
 	    loop_end()
