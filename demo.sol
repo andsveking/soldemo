@@ -1176,7 +1176,7 @@ function run_floor()
             local heightf : float = float(height[0])
             
             C.glViewport(0,0,width[0],height[0])
-            C.glClearColor(1.0f, 0.2f, 0.2f, 1.0f)
+            C.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
             C.glClear( 0x4100u32 )
             C.glDisable( GL_BLEND )
             C.glEnable( GL_DEPTH_TEST )
@@ -1186,7 +1186,7 @@ function run_floor()
             
             local fov = 2.0f
             local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 300.0f)
-            local camera = mtx_mul(persp, trans_mtx(0.0f, -120.0f + 0.0f * float(C.sin(double(t))), -300.0f))
+            local camera = mtx_mul(persp, trans_mtx(0.0f, -50.0f + 0.0f * float(C.sin(double(t))), -200.0f))
 
             C.glUseProgram(floor_shader)
             C.glUniformMatrix4fv(loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
