@@ -11,7 +11,7 @@ uniform sampler2D tex0;
 
 void main() {
     if (pos.y > 0)
-	    gl_Position = mtx * vec4(pos, 1.1);
+	    gl_Position = mtx * vec4(pos, 1.0);
     else
 	    gl_Position = mtx * vec4(pos.x - 0.1*pos.y, pos.y * 0.4, pos.z + 0.1*pos.y, 1);
 

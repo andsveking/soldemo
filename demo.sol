@@ -1874,7 +1874,7 @@ function run_floor()
 
                     local PX = int(x);
                     local PY = int(z);
-                    if PX >= 0 and PX < 256 and PY >= 0 and PY < 256 then  
+                    if PX > 0 and PX < 255 and PY > 0 and PY < 255 then  
                         floordata[cur].heights[PY*256+PX] = -15.0f;
                     end
                 end
