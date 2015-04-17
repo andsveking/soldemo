@@ -650,30 +650,30 @@ function qb_add_3d( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : flo
 
     -- vertices
     -- tri A: a,b,c
-    qb.vert_buf[i+ 0] = y0
-    qb.vert_buf[i+ 1] = z[0]
-    qb.vert_buf[i+ 2] = x0
+    qb.vert_buf[i+ 1] = y0
+    qb.vert_buf[i+ 2] = z[0]
+    qb.vert_buf[i+ 0] = x0
 
-    qb.vert_buf[i+ 3] = y0
-    qb.vert_buf[i+ 4] = z[1]
-    qb.vert_buf[i+ 5] = x1
+    qb.vert_buf[i+ 4] = y0
+    qb.vert_buf[i+ 5] = z[1]
+    qb.vert_buf[i+ 3] = x1
 
-    qb.vert_buf[i+ 6] = y1
-    qb.vert_buf[i+ 7] = z[3]
-    qb.vert_buf[i+ 8] = x1
+    qb.vert_buf[i+ 7] = y1
+    qb.vert_buf[i+ 8] = z[3]
+    qb.vert_buf[i+ 6] = x1
 
     -- tri B: a,c,d
-    qb.vert_buf[i+ 9] = y0
-    qb.vert_buf[i+10] = z[0]
-    qb.vert_buf[i+11] = x0
+    qb.vert_buf[i+10] = y0
+    qb.vert_buf[i+11] = z[0]
+    qb.vert_buf[i+9] = x0
 
-    qb.vert_buf[i+12] = y1
-    qb.vert_buf[i+13] = z[3]
-    qb.vert_buf[i+14] = x1
+    qb.vert_buf[i+13] = y1
+    qb.vert_buf[i+14] = z[3]
+    qb.vert_buf[i+12] = x1
 
-    qb.vert_buf[i+15] = y1
-    qb.vert_buf[i+16] = z[2]
-    qb.vert_buf[i+17] = x0
+    qb.vert_buf[i+16] = y1
+    qb.vert_buf[i+17] = z[2]
+    qb.vert_buf[i+15] = x0
 
     i = qb.cursor * 2 * 6
     -- uv0
@@ -866,31 +866,6 @@ function trans_mtx(x:float, y:float, z:float) : [float]
     mtx[3] = x
     mtx[7] = y
     mtx[11] = z
-    return mtx
-end
-
-function floor_mtx() : [float]
-    local mtx : [float] = [16:float]
-
-    mtx[0] = 1.0f
-    mtx[1] = 0.0f
-    mtx[2] = 0.0f
-    mtx[3] = 0.0f
-
-    mtx[4] = 0.0f
-    mtx[5] = 0.0f
-    mtx[6] = 1.0f
-    mtx[7] = 0.0f
-
-    mtx[8] = 0.0f
-    mtx[9] = -1.0f
-    mtx[10] = 0.0f
-    mtx[11] = 0.0f
-
-    mtx[12] = 0.0f
-    mtx[13] = 0.0f
-    mtx[14] = 0.0f
-    mtx[15] = 1.0f
     return mtx
 end
 
@@ -1623,7 +1598,6 @@ function run_floor()
             C.glEnable( GL_DEPTH_TEST )
             C.glDisable( GL_CULL_FACE )
 
-
             local ortho_mtx = ortho_mtx( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f);
 
             local fov = 2.0f
@@ -1657,12 +1631,10 @@ function run_floor()
             local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f))
             -- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
 
-            gen_cube_particles( 100.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
-            -- gen_cube_particles( float(C.sin(double(t))) * 100.0f, float(C.cos(double(t))) * 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            gen_cube_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
             C.glUseProgram(particle_shader)
-            C.glUniformMatrix4fv(particle_loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
-            scene_particle_draw(window, mtx_mul(camera, floor_mtx()), 0.1)
+            scene_particle_draw(window, camera, 0.1)
 
             if (C.glfwGetMouseButton(window, 0) == 1) then
                 test_psys.mode = PARTICLE_MODE_STATIC
@@ -1679,6 +1651,14 @@ function run_floor()
                 end
                 a = a + 1
             end
+
+
+--            local p:int = 0;
+--            while (p < MAX_PARTICLE_COUNT) do
+--                    local pos:[float] = ps.particle_buf[p].pos;
+--                    qb_add_3d( qb, ps.particle_buf[i].pos[0], ps.particle_buf[i].pos[1], ps.particle_buf[i].pos[0] + 10.0f, ps.particle_buf[i].pos[1] + 10.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
+--                i = i + 1
+--            end
 
 
             ----- TEXt
