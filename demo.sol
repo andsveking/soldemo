@@ -607,8 +607,8 @@ local particle_buf : [@Particle] = [particle_amount:@Particle]
 
 function scene_particle_init()
 
-    local vertex_src : String = read_file_as_string("demo/data/shaders/particle.vp")
-    local fragment_src : String = read_file_as_string("demo/data/shaders/particle.fp")
+    local vertex_src : String = read_file_as_string("data/shaders/particle.vp")
+    local fragment_src : String = read_file_as_string("data/shaders/particle.fp")
 
     particle_shader = create_shader( vertex_src, fragment_src )
     check_error("(particle) create shader", false)
@@ -750,9 +750,9 @@ function main(): int
     if (window ~= 0u64) then
         C.glfwShowWindow( window )
 
-        local vertex_src : String = read_file_as_string("demo/data/shaders/shader.vp")
+        local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
         -- io.println("vertex_src: " .. vertex_src)
-        local fragment_src : String = read_file_as_string("demo/data/shaders/shader.fp")
+        local fragment_src : String = read_file_as_string("data/shaders/shader.fp")
         -- io.println("fragment_src: " .. fragment_src)
 
         local shader = create_shader( vertex_src, fragment_src )
@@ -773,7 +773,7 @@ function main(): int
         qb_end(alt_text)
 
         -- setup()
-        local tex0_data : [byte] = read_file( "demo/data/textures/consolefont.raw" )
+        local tex0_data : [byte] = read_file( "data/textures/consolefont.raw" )
         local tex0 = create_texture(256, 256, tex0_data)
         --[[
         local tex0 = create_texture(2, 1, [255u8,0u8,0u8,255u8,
