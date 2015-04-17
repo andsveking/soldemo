@@ -1181,6 +1181,102 @@ function gen_square_points( x : float, y : float, w : float, h : float, ps : Par
     -- return points
 end
 
+function gen_plus_side( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, start_i : int, mtx : [float] ) : int
+
+    local wh : float = w / 2.0f
+    local hh : float = h / 2.0f
+    local dh : float = d / 2.0f
+
+    local wh2 : float = wh / 2.0f
+    local hh2 : float = hh / 2.0f
+    local dh2 : float = dh / 2.0f
+
+    -- verts
+    local v0 : [float] = [4:float]
+    local v1 : [float] = [4:float]
+    local v2 : [float] = [4:float]
+    local v3 : [float] = [4:float]
+
+    v0[0] = - wh2
+    v0[1] = - hh
+    v0[2] =   dh
+    v0[3] = 1.0f
+    v0 = vec_mul(mtx, v0)
+
+    v1[0] =   wh2
+    v1[1] = - hh
+    v1[2] =   dh
+    v1[3] = 1.0f
+    v1 = vec_mul(mtx, v1)
+
+    v2[0] =   wh2
+    v2[1] =   hh
+    v2[2] =   dh
+    v2[3] = 1.0f
+    v2 = vec_mul(mtx, v2)
+
+    v3[0] = - wh2
+    v3[1] =   hh
+    v3[2] =   dh
+    v3[3] = 1.0f
+    v3 = vec_mul(mtx, v3)
+
+
+    v0[0] = v0[0] + x
+    v0[1] = v0[1] + y
+    v0[2] = v0[2] + z
+    v1[0] = v1[0] + x
+    v1[1] = v1[1] + y
+    v1[2] = v1[2] + z
+    v2[0] = v2[0] + x
+    v2[1] = v2[1] + y
+    v2[2] = v2[2] + z
+    v3[0] = v3[0] + x
+    v3[1] = v3[1] + y
+    v3[2] = v3[2] + z
+
+
+    local lines = 32
+    local points_per_line = float(MAX_PARTICLE_COUNT) / float(lines)
+
+    local ppl_i : int = int(points_per_line)
+    gen_points_from_line( v0, v1, ppl_i, ps, ppl_i*0 + start_i*ppl_i)
+    gen_points_from_line( v1, v2, ppl_i, ps, ppl_i*1 + start_i*ppl_i)
+    gen_points_from_line( v2, v3, ppl_i, ps, ppl_i*2 + start_i*ppl_i)
+    gen_points_from_line( v3, v0, ppl_i, ps, ppl_i*3 + start_i*ppl_i)
+
+end
+
+function gen_logo_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
+
+    local rmtx : [float] = ident_mtx()
+    rmtx = mtx_mul(rmtx, mtx)
+    gen_plus_side( x, y, z, w, h, d, ps, 0, rmtx )
+    rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
+    gen_plus_side( x, y, z, w, h, d, ps, 4, rmtx )
+    rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
+    gen_plus_side( x, y, z, w, h, d, ps, 8, rmtx )
+    rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
+    gen_plus_side( x, y, z, w, h, d, ps, 12, rmtx )
+
+    rmtx = ident_mtx()
+    rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
+    rmtx = mtx_mul(mtx, rmtx)
+    gen_plus_side( x, y, z, w, h, d, ps, 16, rmtx )
+
+    rmtx = ident_mtx()
+    rmtx = mtx_rotate_Y(rmtx, -3.14/2.0)
+    rmtx = mtx_mul(mtx, rmtx)
+    gen_plus_side( x, y, z, w, h, d, ps, 20, rmtx )
+    -- rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
+    -- gen_plus_side( x, y, z, w, h, d, ps, 20, rmtx )
+    -- rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
+    -- gen_plus_side( x, y, z, w, h, d, ps, 24, rmtx )
+    -- rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
+    -- gen_plus_side( x, y, z, w, h, d, ps, 28, rmtx )
+
+end
+
 function gen_cube_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
     local wh : float = w / 2.0f
@@ -1749,7 +1845,8 @@ function run_floor()
                 end
 
                 if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
-                    gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                    -- gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                    gen_logo_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
                 end
 
                 if (int(t) % 10 == 0 and test_psys.mode == PARTICLE_MODE_FOLLOW ) then
