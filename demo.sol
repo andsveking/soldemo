@@ -769,6 +769,55 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
 
 end
 
+--------------------------------------------------------------
+-- particle meshes????
+local MAX_PARTICLE_COUNT : int = 4096
+struct Particle
+    local pos : @[3:float]
+    --local vel : @[3:float]
+    local target : @[3:float]
+    local speed : float
+end
+
+local PARTICLE_MODE_STATIC : int = 0
+local PARTICLE_MODE_FOLLOW : int = 1
+-- local PARTICLE_MODE_FOLLOW = 0
+
+struct ParticleSystem
+    local mode : int
+    local particle_buf : [@Particle]
+end
+
+
+local test_psys : ParticleSystem = ParticleSystem { mode = PARTICLE_MODE_STATIC }
+
+function init_meshy_cube()
+    test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
+end
+
+function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch )
+
+    -- update particles depending on mode
+    if (ps.mode == PARTICLE_MODE_STATIC) then
+        -- do nothing
+    end
+
+    -- render!!!
+    qb_begin( qb )
+    local i : int = 0
+    while (i < MAX_PARTICLE_COUNT) do
+            qb_add_centered( qb,
+            ps.particle_buf[i].pos[0],
+            ps.particle_buf[i].pos[1],
+            8.0f, 8.0f,
+            0.0f, 0.0f, 1.0f, 1.0f )
+        i = i + 1
+    end
+    qb_end( qb )
+
+end
+
+
 
 --------------------------------------------------------------
 -- scenes??
@@ -779,12 +828,14 @@ local particle_qb : QuadBatch
 local particle_amount : int = 1024*10
 local particle_loc_mtx : int
 
-struct Particle
-    local pos : @[3:float]
-    local vel : @[3:float]
-end
+-- struct Particle
+--     local pos : @[3:float]
+--     --local vel : @[3:float]
+--     local target : @[3:float]
+--     local speed : float
+-- end
 
-local particle_buf : [@Particle] = [particle_amount:@Particle]
+-- local particle_buf : [@Particle] = [particle_amount:@Particle]
 
 function scene_particle_init()
 
@@ -798,6 +849,8 @@ function scene_particle_init()
 
     particle_qb = create_quad_batch( particle_amount )
 
+    init_meshy_cube()
+
     --[[
     qb_begin( particle_qb )
     -- qb_add_centered( particle_qb, 320.0f, 320.0f, 640.0f, 640.0f, 0.0f, 0.0f, 1.0f, 1.0f )
@@ -810,6 +863,7 @@ function scene_particle_init()
     ]]
 
     -- init particles
+    --[[
     local i : int = 0
     while (i < particle_amount) do
 
@@ -819,14 +873,15 @@ function scene_particle_init()
         -- particle_buf[i].pos[1] = (random() * 2.0f - 1.0f) * 320.0f
         particle_buf[i].pos[2] = 0.0f
 
-        local angle = random() * 3.14f * 2.0f
-        local asd = random() * 10.0f
-        particle_buf[i].vel[0] = float(C.sin(double(angle))) * asd
-        particle_buf[i].vel[1] = float(C.cos(double(angle))) * asd
-        particle_buf[i].vel[2] = 0.0f
+        -- local angle = random() * 3.14f * 2.0f
+        -- local asd = random() * 10.0f
+        -- particle_buf[i].vel[0] = float(C.sin(double(angle))) * asd
+        -- particle_buf[i].vel[1] = float(C.cos(double(angle))) * asd
+        -- particle_buf[i].vel[2] = 0.0f
 
         i = i + 1
     end
+    ]]
 
 end
 
@@ -841,14 +896,17 @@ function scene_particle_draw( window : uint64, delta : double )
     -- io.println(widthf)
     local particle_mtx = ortho_mtx( -widthf / 2.0f, widthf / 2.0f, -heightf / 2.0f, heightf / 2.0f, 0.0f, 1.0f)
 
+    update_meshy_cube( test_psys, particle_qb )
+
+    --[[
     qb_begin( particle_qb )
     -- qb_add_centered( particle_qb, widthf / 2.0f, heightf / 2.09f, widthf, heightf, 0.0f, 0.0f, 1.0f, 1.0f )
     local i : int = 0
     while (i < particle_amount) do
 
-        particle_buf[i].pos[0] = particle_buf[i].pos[0] + deltaf*particle_buf[i].vel[0]
-        particle_buf[i].pos[1] = particle_buf[i].pos[1] + deltaf*particle_buf[i].vel[1]
-        particle_buf[i].pos[2] = particle_buf[i].pos[2] + deltaf*particle_buf[i].vel[2]
+        -- particle_buf[i].pos[0] = particle_buf[i].pos[0] + deltaf*particle_buf[i].vel[0]
+        -- particle_buf[i].pos[1] = particle_buf[i].pos[1] + deltaf*particle_buf[i].vel[1]
+        -- particle_buf[i].pos[2] = particle_buf[i].pos[2] + deltaf*particle_buf[i].vel[2]
 
         qb_add_centered( particle_qb,
             -- widthf / 2.0f + (random() * 2.0f - 1.0f) * widthf,
@@ -862,6 +920,7 @@ function scene_particle_draw( window : uint64, delta : double )
         i = i + 1
     end
     qb_end( particle_qb )
+    ]]
 
     C.glUseProgram(particle_shader)
     C.glUniformMatrix4fv(particle_loc_mtx, 1, true, particle_mtx)
@@ -986,7 +1045,7 @@ function main(): int
         -- init audio and load sound
         local sound_system = init_audio()
         local drum_sound = load_sound( sound_system, "data/music/skadad.mp3" )
-        play_sound( sound_system, drum_sound )
+        -- play_sound( sound_system, drum_sound )
 
         local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
         -- io.println("vertex_src: " .. vertex_src)
