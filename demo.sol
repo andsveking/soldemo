@@ -917,6 +917,56 @@ function mtx_rotate_X(Q : [float], angle : double) : [float]
     -- return R
 end
 
+function mtx_rotate_Y(Q : [float], angle : double) : [float]
+    local s : float = float(C.sin(angle))
+    local c : float = float(C.cos(angle))
+    local R : [float] =  [16:float]
+
+    R[0] = c
+    R[1] = 0.f
+    R[2] = s
+    R[3] = 0.f
+    R[4] = 0.f
+    R[5] = 1.f
+    R[6] = 0.f
+    R[7] = 0.f
+    R[8] = -s
+    R[9] = 0.f
+    R[10] = c
+    R[11] = 0.f
+    R[12] = 0.f
+    R[13] = 0.f
+    R[14] = 0.f
+    R[15] = 1.f
+
+    return mtx_mul(R, Q)
+end
+
+function mtx_rotate_Z(Q : [float], angle : double) : [float]
+    local s : float = float(C.sin(angle))
+    local c : float = float(C.cos(angle))
+    local R : [float] =  [16:float]
+
+    R[0] = c
+    R[1] = s
+    R[2] = 0.f
+    R[3] = 0.f
+    R[4] = -s
+    R[5] = c
+    R[6] = 0.f
+    R[7] = 0.f
+    R[8] = 0.f
+    R[9] = 0.f
+    R[10] = 1.f
+    R[11] = 0.f
+    R[12] = 0.f
+    R[13] = 0.f
+    R[14] = 0.f
+    R[15] = 1.f
+
+    return mtx_mul(R, Q)
+end
+
 function vec_mul(mtx:[float], vec:[float]) : [float]
     local out : [float] = [4:float]
 	local k = 0
