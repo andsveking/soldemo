@@ -1,5 +1,6 @@
 #version 330
 in vec2 uv0;
+in vec3 world;
 out vec4 fragColor;
 
 uniform sampler2D tex0;
@@ -15,31 +16,11 @@ vec3 hsv2rgb(vec3 c)
 }
 
 void main() {
-    /*if (mode == 0)
-    {
-        vec4 color = texture(tex0, uv0);
-        vec2 apa = vec2(gl_FragCoord.xy / 320.0);
-        apa.x += sin(anim*0.1);
-        apa.y += cos(anim*0.1);
-        // anim
-        vec4 mixer = vec4( apa, vec2(1.0));
-        fragColor = vec4(color.rgb * mixer.rgb, color.a);
-    } else { //if (mode == 1)
-        vec4 color = texture(tex0, uv0);
-        vec3 apa = vec3(anim * 0.01);
-        apa.r += abs(sin((6.0 - offset)*0.2));
-        apa.g += abs(cos((6.0 - offset)*0.1));
-        apa.b += abs(sin((6.0 - offset)*0.1+anim*0.01));
-        apa = fract(apa);
-        apa = max(apa, vec3(0.3));
-        // vec4 mixer = vec4( hsv2rgb(apa), 1.0);
-        vec4 mixer = vec4( apa, 1.0);
-        // fragColor = color;
-        fragColor = vec4(color.rgb * mixer.rgb, color.a * (offset / 6.0));
-    }*/
-    // fragColor = vec4(color.rgb * vec3(uv0, 1.0), color.a);
-    // fragColor = vec4(uv0, 1.0, 1.0);
     vec2 p = uv0 * 2.0 - 1.0;
     float d = 1.0 - length(p);
-    fragColor = vec4(d);
+
+    if (world.y < 0)
+	fragColor = vec4(0.04*d);
+    else
+    	fragColor = vec4(d);
 }

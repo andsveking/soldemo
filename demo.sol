@@ -1631,7 +1631,7 @@ function run_floor()
             local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f))
             -- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
 
-            gen_cube_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            gen_cube_particles(0.0f, 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
             C.glUseProgram(particle_shader)
             scene_particle_draw(window, camera, 0.1)
@@ -1653,13 +1653,22 @@ function run_floor()
             end
 
 
---            local p:int = 0;
---            while (p < MAX_PARTICLE_COUNT) do
---                    local pos:[float] = ps.particle_buf[p].pos;
---                    qb_add_3d( qb, ps.particle_buf[i].pos[0], ps.particle_buf[i].pos[1], ps.particle_buf[i].pos[0] + 10.0f, ps.particle_buf[i].pos[1] + 10.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
---                i = i + 1
---            end
+            local p:int = 0;
+            while (p < MAX_PARTICLE_COUNT) do
+                local pos:[3:float] = test_psys.particle_buf[p].pos;
+                if (pos[1] < 0.0f) and (pos[1] > -5.0f) then
+                    local x = (pos[0] + 256.0f) * 0.5f;
+                    local z = (pos[2] + 256.0f) * 0.5f;
+                    local y = pos[1];
 
+                    local PX = int(x);
+                    local PY = int(z);
+                    if PX >= 0 and PX < 256 and PY >= 0 and PY < 256 then  
+                        floordata[cur].heights[PY*256+PX] = -15.0f;
+                    end
+                end
+                p = p + 1
+            end
 
             ----- TEXt
             C.glDisable(GL_DEPTH_TEST);
