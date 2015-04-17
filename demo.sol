@@ -158,6 +158,9 @@ local SEEK_END            : int = 2
 
 local RAND_MAX            : int = 2147483647
 
+--
+local window : uint64
+
 ------------------------------------------------------------------------
 -- Helpers
 function ERROR_LUT( id : uint32 ) : String
@@ -280,7 +283,7 @@ end
 function create_quad_batch( capacity : int ) : QuadBatch
     local qb : QuadBatch = QuadBatch { vert_gl  = 0u32,
                                        uv_gl    = 0u32,
-                                       vert_buf = [capacity*2*6:float],
+                                       vert_buf = [capacity*3*6:float],
                                        uv_buf   = [capacity*2*6:float],
                                        capacity = capacity,
                                        cursor   = 0 }
@@ -298,7 +301,7 @@ function create_quad_batch( capacity : int ) : QuadBatch
     C.glBindVertexArray(qb.vao)
     C.glEnableVertexAttribArray( 0 )
     C.glBindBuffer( GL_ARRAY_BUFFER, qb.vert_gl )
-    C.glVertexAttribPointer(0u32, 2, GL_FLOAT, false, 0, 0)
+    C.glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
     C.glBindVertexArray(0u32)
 
     return qb
@@ -310,7 +313,7 @@ end
 
 function qb_end( qb : QuadBatch )
 
-    local i : int = qb.cursor*2*6
+    local i : int = qb.cursor*3*6
 
     C.glBindVertexArray(qb.vao)
 
@@ -319,7 +322,7 @@ function qb_end( qb : QuadBatch )
     check_error( "qb_render: binding vert buffer", false )
     C.glBufferData( GL_ARRAY_BUFFER, i*4, qb.vert_buf, GL_STATIC_DRAW )
     check_error( "qb_render: upload vert buffer", false )
-    C.glVertexAttribPointer(0u32, 2, GL_FLOAT, false, 0, 0)
+    C.glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
 
     C.glEnableVertexAttribArray( 1 )
     C.glBindBuffer( GL_ARRAY_BUFFER, qb.uv_gl )
@@ -350,29 +353,36 @@ function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float,
 
     ]]
 
-    local i : int = qb.cursor*2*6 -- (x,y) * vert_count * triangle_count_per_quad
+    local i : int = qb.cursor*3*6 -- (x,y) * vert_count * triangle_count_per_quad
 
     -- vertices
     -- tri A: a,b,c
     qb.vert_buf[i+ 0] = x0
     qb.vert_buf[i+ 1] = y0
+    qb.vert_buf[i+ 2] = 0f
 
-    qb.vert_buf[i+ 2] = x1
-    qb.vert_buf[i+ 3] = y0
+    qb.vert_buf[i+ 3] = x1
+    qb.vert_buf[i+ 4] = y0
+    qb.vert_buf[i+ 5] = 0f
 
-    qb.vert_buf[i+ 4] = x1
-    qb.vert_buf[i+ 5] = y1
+    qb.vert_buf[i+ 6] = x1
+    qb.vert_buf[i+ 7] = y1
+    qb.vert_buf[i+ 8] = 0f
 
     -- tri B: a,c,d
-    qb.vert_buf[i+ 6] = x0
-    qb.vert_buf[i+ 7] = y0
+    qb.vert_buf[i+ 9] = x0
+    qb.vert_buf[i+10] = y0
+    qb.vert_buf[i+11] = 0f
 
-    qb.vert_buf[i+ 8] = x1
-    qb.vert_buf[i+ 9] = y1
+    qb.vert_buf[i+12] = x1
+    qb.vert_buf[i+13] = y1
+    qb.vert_buf[i+14] = 0f
 
-    qb.vert_buf[i+10] = x0
-    qb.vert_buf[i+11] = y1
+    qb.vert_buf[i+15] = x0
+    qb.vert_buf[i+16] = y1
+    qb.vert_buf[i+17] = 0f
 
+    i = qb.cursor * 2 * 6
     -- uv0
     -- tri A: a,b,c
     qb.uv_buf[i+ 0] = u0
@@ -508,6 +518,33 @@ function ortho_mtx( l : float, r : float, b : float, t : float, n : float, f : f
     return mtx
 end
 
+function persp_mtx( l : float, r : float, b : float, t : float, n : float, f : float ) : [float]
+    local mtx : [float] = [16:float]
+
+    --x, y
+    mtx[0] = 2.0f/(r-l);
+    mtx[1] = 0.0f;
+    mtx[2] = -(r+l)/(r-l);
+    mtx[3] = 0.0f;
+
+    mtx[4] = 0.0f;
+    mtx[5] = 2.0f/(t-b);
+    mtx[6] = -(t+b)/(t-b);
+    mtx[7] = 0.0f;
+
+    mtx[8] = 0.0f;
+    mtx[9] = 0.0f;
+    mtx[10] = -(f+n)/(f-n);
+    mtx[11] = -2.0f*(f+n)/(f-n);
+
+    mtx[12] = 0.0f;
+    mtx[13] = 0.0f;
+    mtx[14] = -1.0f;
+    mtx[15] = 0.0f;
+    return mtx
+end
+
+
 function ident_mtx() : [float]
     local mtx : [float] = [16:float]
 
@@ -528,6 +565,65 @@ function ident_mtx() : [float]
     mtx[14] = 0.0f
     mtx[15] = 1.0f
 
+    return mtx
+end
+
+function trans_mtx(x:float, y:float, z:float) : [float]
+    local mtx : [float] = ident_mtx()
+    mtx[3] = x
+    mtx[7] = y
+    mtx[11] = z
+    return mtx
+end
+
+function floor_mtx() : [float]
+    local mtx : [float] = [16:float]
+
+    mtx[0] = 1.0f
+    mtx[1] = 0.0f
+    mtx[2] = 0.0f
+    mtx[3] = 0.0f
+    
+    mtx[4] = 0.0f
+    mtx[5] = 0.0f
+    mtx[6] = -1.0f
+    mtx[7] = 0.0f
+    
+    mtx[8] = 0.0f
+    mtx[9] = 1.0f
+    mtx[10] = 0.0f
+    mtx[11] = 0.0f
+    
+    mtx[12] = 0.0f
+    mtx[13] = 0.0f
+    mtx[14] = 0.0f
+    mtx[15] = 1.0f
+    return mtx
+end
+
+function mtx_mul(a:[float], b:[float]) : [float]
+    local mtx : [float] = [16:float]
+    local c = 0
+    while c < 4 do
+        local d = 0 
+        while d < 4 do
+            local k = 0 
+            local sum = 0.0f
+            while k < 4 do
+                sum = sum + a[4*c + k] * b[4*k + d]
+                k = k + 1
+            end
+            mtx[4*c + d] = sum
+            d = d + 1
+        end
+        c = c + 1
+    end
+    
+    local q = 0
+    while q < 16 do
+        io.println(mtx[q])
+        q = q + 1
+    end
     return mtx
 end
 
@@ -597,6 +693,8 @@ local particle_qb : QuadBatch
 -- local particle_mtx : [float] = ortho_mtx( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f)
 local particle_amount : int = 1024*10
 local particle_loc_mtx : int
+
+---
 
 struct Particle
     local pos : @[3:float]
@@ -720,10 +818,83 @@ function render( window : uint64, delta : double )
     C.glDisable( GL_DEPTH_TEST )
     C.glDisable( GL_CULL_FACE )
 
-    scene_particle_draw( window, delta )
+
+
+
+--    scene_particle_draw( window, delta )
 
 
 end
+
+function loop_begin():bool
+	return C.glfwWindowShouldClose( window ) <= 0
+end
+
+function loop_end()
+        C.glfwSwapBuffers(window)
+        C.glfwPollEvents()
+end
+
+
+function draw_floor(qb:QuadBatch)
+    local u = 0
+    qb_begin(qb);
+    while u < 64 do
+        local x:float = float(u) - 32.0f
+        local v = 0
+        while v < 64 do
+            local y:float = float(v) - 32.0f
+            qb_add(qb, x, y, x + 0.9f, y + 0.9f, 0.0f, 0.0f, 1.0f, 1.0f)
+            v = v + 1
+        end
+        u = u + 1
+    end
+    qb_end(qb)
+    qb_render(qb)
+end
+
+function run_floor()
+
+	local fb : QuadBatch = create_quad_batch(1024*1024)
+    local vertex_src : String = read_file_as_string("data/shaders/floor.vp")
+    local fragment_src : String = read_file_as_string("data/shaders/floor.fp")
+
+    local floor_shader = create_shader( vertex_src, fragment_src )
+    check_error("(particle) create shader", false)
+    
+    local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx".bytes )
+    check_error("(particle) getting locations", false)
+
+	while loop_begin() do
+            local width  : [int] = [1:int]
+            local height : [int] = [1:int]
+            
+            C.glfwGetFramebufferSize( window, width, height )
+            local widthf : float = float(width[0])
+            local heightf : float = float(height[0])
+            
+            C.glViewport(0,0,width[0],height[0])
+            C.glClearColor(1.0f, 0.2f, 0.2f, 1.0f)
+            C.glClear( GL_COLOR_BUFFER_BIT )
+            C.glEnable( GL_BLEND )
+            C.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            C.glDisable( GL_DEPTH_TEST )
+            C.glDisable( GL_CULL_FACE )
+            
+            local ortho_mtx = ortho_mtx( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f);
+            
+            local fov = 2.0f
+            local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 100.0f)
+            local camera = mtx_mul(persp, trans_mtx(0.0f, -5.0f, 0.0f))
+
+            C.glUseProgram(floor_shader)
+            C.glUniformMatrix4fv(loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
+
+            draw_floor(fb)
+	    loop_end()
+	end
+end
+
 
 local line1 : String = "SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL"
 local line2 : String = "awesome scroller! check it... - leet haxxxx - very lua - much types"
@@ -745,7 +916,7 @@ function main(): int
     C.glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     C.glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    local window = C.glfwCreateWindow( 320, 320, "sol".bytes, 0u64, 0u64)
+    window = C.glfwCreateWindow( 800, 600, "sol".bytes, 0u64, 0u64)
 
     if (window ~= 0u64) then
         C.glfwShowWindow( window )
@@ -786,7 +957,11 @@ function main(): int
         local last_time_stamp = C.glfwGetTime()
 
         -- init scenes
-        scene_particle_init()
+        -- scene_particle_init()
+
+	run_floor()
+	return 1;
+
 
         while C.glfwWindowShouldClose( window ) <= 0 do
 
