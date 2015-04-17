@@ -17,7 +17,7 @@ void main() {
     {
         tpos.x -= anim;
         tpos.y += sin((tpos.x + tpos.y) * 0.02 ) * 60.0f * tpos.y / 320.0f; //((tpos.y - 0.5f) / 1.0f);
-    } else {
+    } else if (mode == 1) {
         tpos.y += abs(sin(tpos.x * 0.01 + anim * 0.04 + offset * 0.2) * 60.0f);
     }
 

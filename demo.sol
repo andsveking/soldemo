@@ -946,6 +946,42 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
 
 end
 
+function qb_text_slam( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float, where:float )
+
+    local delta = 16.0f / 256.0f
+    local i = 0
+    local x = start_x
+    while (txt.bytes[i] ~= 0u8) do
+        -- local b : float = i
+        -- io.print(txt.bytes[i])
+
+        local u0 = lut_u[txt.bytes[i]]
+        local v0 = lut_v[txt.bytes[i]]
+        local u1 = u0 + delta
+        local v1 = v0 + delta
+
+        local p = where - float(i);
+        local size = 1.0f
+        if (p < -1.0f) then
+            size = 0.0f
+        else
+            size = 4.0f - 6.0f*p*p;
+            if p < 0.0f and size < 0.0f then
+                size = 0.0f
+            end
+            if p > 0.0f and (size < 1.0f) then
+                size = 1.0f
+            end
+        end
+
+        qb_add_centered( qb, x, start_y, char_w*size, char_w*size, u0, v1, u1, v0 )
+
+        i = i + 1
+        x = x + spacing
+    end
+
+end
+
 
 --------------------------------------------------------------
 -- scenes??
@@ -1123,6 +1159,11 @@ function gen_floor(qb:QuadBatch, gridsize:int)
     qb_end(qb)
 end
 
+-- DO NOT REMOVE
+!noinline
+function fixcompiler(tmp:float)
+end
+
 function floor_sim(src:int, dst:int)
     local u = 1
     local c2 = 30.0f
@@ -1150,19 +1191,30 @@ end
 function run_floor()
 
 	local fb : QuadBatch = create_quad_batch(1024*1024)
+
     local vertex_src : String = read_file_as_string("data/shaders/floor.vp")
     local fragment_src : String = read_file_as_string("data/shaders/floor.fp")
+    local floor_shader = create_shader( vertex_src, fragment_src );
+    check_error("(floor) create shader", false);
 
-    local floor_shader = create_shader( vertex_src, fragment_src )
-    check_error("(particle) create shader", false)
-    
+    --- text
+
+    vertex_src  = read_file_as_string("data/shaders/shader.vp")
+    fragment_src  = read_file_as_string("data/shaders/shader.fp")
+    local text_shader = create_shader( vertex_src, fragment_src )
+    check_error("(text) create shader", false);
+    local text_qb : QuadBatch = create_quad_batch( 1024 )
+
     local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx".bytes )
     check_error("(particle) getting locations", false)
-
     local water_fade:int = C.glGetUniformLocation( floor_shader, "waterFade".bytes );
+    local water_time:int = C.glGetUniformLocation( floor_shader, "waterTime".bytes );
 
     local t:float = 0.0f
 
+
+    local tex0_data : [byte] = read_file( "data/textures/consolefont.raw" )
+    local tex0 = create_texture(256, 256, tex0_data)
 
     local htex = [1:uint32]
     C.glGenTextures(1, htex);
@@ -1177,8 +1229,8 @@ function run_floor()
 
 	local last_time_stamp = C.glfwGetTime();
 	local start_time = C.glfwGetTime();
-
 	local to_water:float = 0.0f;
+    local water_t:float = 0.0f;
 
 	while loop_begin() do
             local width  : [int] = [1:int]
@@ -1191,12 +1243,16 @@ function run_floor()
 			local tm:[@WrapUInt64] = [1:@WrapUInt64];
 			C.FMOD_Channel_GetPosition(music_channel, tm, 1u64);            
 
-			if tm[0].val > 2000u64 then
+			if tm[0].val > 12000u64 then
 				to_water = to_water + (1.0f - to_water) * 3.0f * float(delta)
 				if to_water > 1.0f then
 					to_water = 1.0f
 				end
 			end
+
+            -- DO NOT REMOVE
+            fixcompiler(water_t);
+            water_t = to_water * float(delta) + water_t;
 
             C.glfwGetFramebufferSize( window, width, height )
             local widthf : float = float(width[0])
@@ -1213,7 +1269,7 @@ function run_floor()
             
             local fov = 2.0f
             local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 300.0f)
-            local camera = mtx_mul(persp, trans_mtx(0.0f, -60.0f, -200.0f))
+            local camera = mtx_mul(persp, trans_mtx(0.0f, -50.0f + float(C.sin(double(t)*0.2))*10.0f, -250.0f))
 
             C.glUseProgram(floor_shader)
             C.glUniformMatrix4fv(loc_mtx, 1, true, camera)
@@ -1226,8 +1282,11 @@ function run_floor()
                 k = k + 1
             end
 
+            C.glBindTexture(GL_TEXTURE_2D, htex[0]);
+            C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, 0, 0, 0, GL_RED, GL_FLOAT, texdata);
             C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
             C.glUniform1f(water_fade, to_water);
+            C.glUniform1f(water_time, water_t);
 
 	        qb_render(fb)
             floor_sim(cur, 1 - cur)
@@ -1246,7 +1305,48 @@ function run_floor()
             end
 
 
-            t = t + 0.01f
+            ----- TEXt
+            C.glDisable(GL_DEPTH_TEST);
+
+            local ortho_mtx = ortho_mtx( 0.0f, 800.0f, 0.0f, 600.0f, 0.0f, 1.0f )
+            local location_mtx = C.glGetUniformLocation( text_shader, "mtx".bytes )
+            local location_anim = C.glGetUniformLocation( text_shader, "anim".bytes )
+            local location_offset = C.glGetUniformLocation( text_shader, "offset".bytes )
+            local location_mode = C.glGetUniformLocation( text_shader, "mode".bytes )
+            check_error("getting locations", false)
+
+            C.glEnable(GL_BLEND)
+            C.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            C.glUseProgram(text_shader);
+            C.glUniformMatrix4fv(location_mtx, 1, true, ortho_mtx);
+            C.glUniform1f(location_anim, t);
+            C.glUniform1f(location_offset, t);
+            C.glUniform1i(location_mode, 3);
+            C.glBindTexture( GL_TEXTURE_2D, tex0 );
+
+            qb_begin(text_qb);
+
+            local pandown = (t - 10.0f);
+            if pandown < 0.0f then
+                pandown = 0.0f
+            end
+            pandown = pandown * pandown * 500.0f;
+            if (pandown > 1000.0f) then
+            end
+
+            local t1 = 4.0f * t;
+            qb_text_slam(text_qb, 75.0f, 500.0f + pandown, "DEFOLD CREW", 128.0f, 64.0f, t1)
+
+            local t2 = 4.0f * (t - 3.5f)
+            qb_text_slam(text_qb, 280.0f - pandown, 400.0f, "PRESENTS", 64.0f, 32.0f, t2)
+
+            local t3 = 4.0f * (t - 7.0f)
+            qb_text_slam(text_qb, 100.0f, 200.0f - pandown, "SOL HAX", 200.0f, 100.0f, t3)
+
+            qb_end(text_qb)
+            qb_render(text_qb);
+
+            t = t + float(delta);
 	    loop_end()
 	end
 end
