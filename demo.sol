@@ -890,7 +890,7 @@ function mtx_mul(a:[float], b:[float]) : [float]
 end
 
 function mtx_rotate_X(Q : [float], angle : double) : [float]
-    io.println(angle)
+    -- io.println(angle)
     local s : float = float(C.sin(angle));
     local c : float = float(C.cos(angle));
     local R : [float] = [16:float]
@@ -1136,54 +1136,78 @@ function gen_cube_particles( x : float, y : float, z : float, w : float, h : flo
     local v6 : [float] = [4:float]
     local v7 : [float] = [4:float]
 
-    v0[0] = x - wh
-    v0[1] = y - hh
-    v0[2] = z + dh
+    v0[0] = - wh
+    v0[1] = - hh
+    v0[2] =   dh
     v0[3] = 1.0f
     v0 = vec_mul(mtx, v0)
 
-    v1[0] = x + wh
-    v1[1] = y - hh
-    v1[2] = z + dh
+    v1[0] =   wh
+    v1[1] = - hh
+    v1[2] =   dh
     v1[3] = 1.0f
     v1 = vec_mul(mtx, v1)
 
-    v2[0] = x + wh
-    v2[1] = y + hh
-    v2[2] = z + dh
+    v2[0] =   wh
+    v2[1] =   hh
+    v2[2] =   dh
     v2[3] = 1.0f
     v2 = vec_mul(mtx, v2)
 
-    v3[0] = x - wh
-    v3[1] = y + hh
-    v3[2] = z + dh
+    v3[0] = - wh
+    v3[1] =   hh
+    v3[2] =   dh
     v3[3] = 1.0f
     v3 = vec_mul(mtx, v3)
 
-    v4[0] = x - wh
-    v4[1] = y - hh
-    v4[2] = z - dh
+    v4[0] = - wh
+    v4[1] = - hh
+    v4[2] = - dh
     v4[3] = 1.0f
     v4 = vec_mul(mtx, v4)
 
-    v5[0] = x + wh
-    v5[1] = y - hh
-    v5[2] = z - dh
+    v5[0] =   wh
+    v5[1] = - hh
+    v5[2] = - dh
     v5[3] = 1.0f
     v5 = vec_mul(mtx, v5)
 
-    v6[0] = x + wh
-    v6[1] = y + hh
-    v6[2] = z - dh
+    v6[0] =   wh
+    v6[1] =   hh
+    v6[2] = - dh
     v6[3] = 1.0f
     v6 = vec_mul(mtx, v6)
 
-    v7[0] = x - wh
-    v7[1] = y + hh
-    v7[2] = z - dh
+    v7[0] = - wh
+    v7[1] =   hh
+    v7[2] = - dh
     v7[3] = 1.0f
     v7 = vec_mul(mtx, v7)
 
+    v0[0] = v0[0] + x
+    v0[1] = v0[1] + y
+    v0[2] = v0[2] + z
+    v1[0] = v1[0] + x
+    v1[1] = v1[1] + y
+    v1[2] = v1[2] + z
+    v2[0] = v2[0] + x
+    v2[1] = v2[1] + y
+    v2[2] = v2[2] + z
+    v3[0] = v3[0] + x
+    v3[1] = v3[1] + y
+    v3[2] = v3[2] + z
+    v4[0] = v4[0] + x
+    v4[1] = v4[1] + y
+    v4[2] = v4[2] + z
+    v5[0] = v5[0] + x
+    v5[1] = v5[1] + y
+    v5[2] = v5[2] + z
+    v6[0] = v6[0] + x
+    v6[1] = v6[1] + y
+    v6[2] = v6[2] + z
+    v7[0] = v7[0] + x
+    v7[1] = v7[1] + y
+    v7[2] = v7[2] + z
 
     local lines = 12
     local points_per_line = float(MAX_PARTICLE_COUNT) / float(lines)
@@ -1203,9 +1227,34 @@ function gen_cube_particles( x : float, y : float, z : float, w : float, h : flo
     gen_points_from_line( v1, v5, ppl_i, ps, ppl_i*9 )
 
     gen_points_from_line( v3, v7, ppl_i, ps, ppl_i*10 )
-    gen_points_from_line( v2, v6, ppl_i, ps, ppl_i*11 )
+    gen_points_from_line( v2, v6, MAX_PARTICLE_COUNT - ppl_i*11, ps, ppl_i*11 )
 
 end
+
+
+function gen_haystack_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
+
+    local i:int = 0
+    local dt:float = 40.0f / float(MAX_PARTICLE_COUNT);
+    while (i < MAX_PARTICLE_COUNT) do
+	local tmp:[float] = [4:float];
+	local t = float(i) * dt;
+	local w = C.sin(double(i) / double(MAX_PARTICLE_COUNT));
+	local s = C.sin(double(t));
+	local c = C.cos(double(t));
+	tmp[0] = float(s * 100.0 * w);
+	tmp[1] = 100.0f - 200.0f * float(i)/float(MAX_PARTICLE_COUNT);
+	tmp[2] = float(c * 100.0 * w);
+
+	tmp = vec_mul(mtx, tmp);
+
+        ps.particle_buf[i].target[0] = tmp[0]
+        ps.particle_buf[i].target[1] = tmp[1]
+        ps.particle_buf[i].target[2] = tmp[2]
+        i = i + 1
+    end
+end
+
 
 function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, detla : float )
 
@@ -1631,7 +1680,8 @@ function run_floor()
             local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f))
             -- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
 
-            gen_cube_particles(0.0f, 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+--            gen_cube_particles(0.0f, 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            gen_haystack_particles(0.0f, 100.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
             C.glUseProgram(particle_shader)
             scene_particle_draw(window, camera, 0.1)
