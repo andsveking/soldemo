@@ -1,6 +1,7 @@
 module demo
 
 require io
+require math
 
 ------------------------------------------------------------------
 -- Structs
@@ -91,6 +92,7 @@ extern C
         function glGenTextures( n : int, textures : [uint32] )
         function glBindTexture( target : uint32, texture : uint32)
         function glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [byte])
+        function glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [float])
         function glTexParameteri( target : uint32, pname : uint32, param : uint32 )
 
     -- C Std funcs
@@ -125,6 +127,7 @@ local GL_ALPHA_TEST       : uint32 = 0x0BC0u32
 local GL_DEPTH_TEST       : uint32 = 0x0B71u32
 local GL_CULL_FACE        : uint32 = 0x0B44u32
 
+
 local GL_ZERO                : uint32 = 0u32
 local GL_ONE                 : uint32 = 1u32
 local GL_SRC_COLOR           : uint32 = 0x0300u32
@@ -146,6 +149,10 @@ local GL_TRIANGLES        : uint32 = 0x0004u32
 local GL_TEXTURE_2D       : uint32 = 0x0DE1u32
 local GL_RGBA             : uint32 = 0x1908u32
 local GL_UNSIGNED_BYTE    : uint32 = 0x1401u32
+local GL_LUMINANCE        : uint32 = 0x1901u32
+local GL_ALPHA            : uint32 = 0x1906u32
+local GL_R32F             : uint32 = 0x822Eu32
+local GL_RED              : uint32 = 0x1903u32
 
 local GL_TEXTURE_MAG_FILTER : uint32 = 0x2800u32
 local GL_TEXTURE_MIN_FILTER : uint32 = 0x2801u32
@@ -343,7 +350,7 @@ function qb_render( qb : QuadBatch )
 
 end
 
-function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float )
+function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float)
 
     --[[
 
@@ -381,6 +388,71 @@ function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float,
     qb.vert_buf[i+15] = x0
     qb.vert_buf[i+16] = y1
     qb.vert_buf[i+17] = 0f
+
+    i = qb.cursor * 2 * 6
+    -- uv0
+    -- tri A: a,b,c
+    qb.uv_buf[i+ 0] = u0
+    qb.uv_buf[i+ 1] = v0
+
+    qb.uv_buf[i+ 2] = u1
+    qb.uv_buf[i+ 3] = v0
+
+    qb.uv_buf[i+ 4] = u1
+    qb.uv_buf[i+ 5] = v1
+
+    -- tri B: a,c,d
+    qb.uv_buf[i+ 6] = u0
+    qb.uv_buf[i+ 7] = v0
+
+    qb.uv_buf[i+ 8] = u1
+    qb.uv_buf[i+ 9] = v1
+
+    qb.uv_buf[i+10] = u0
+    qb.uv_buf[i+11] = v1
+
+    qb.cursor = qb.cursor + 1
+
+end
+
+function qb_add_3d( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float, z:[float])
+
+    --[[
+
+    d - c
+    | / |
+    a - b
+
+    ]]
+
+    local i : int = qb.cursor*3*6 -- (x,y) * vert_count * triangle_count_per_quad
+
+    -- vertices
+    -- tri A: a,b,c
+    qb.vert_buf[i+ 0] = x0
+    qb.vert_buf[i+ 1] = y0
+    qb.vert_buf[i+ 2] = z[0]
+
+    qb.vert_buf[i+ 3] = x1
+    qb.vert_buf[i+ 4] = y0
+    qb.vert_buf[i+ 5] = z[1]
+
+    qb.vert_buf[i+ 6] = x1
+    qb.vert_buf[i+ 7] = y1
+    qb.vert_buf[i+ 8] = z[3]
+
+    -- tri B: a,c,d
+    qb.vert_buf[i+ 9] = x0
+    qb.vert_buf[i+10] = y0
+    qb.vert_buf[i+11] = z[0]
+
+    qb.vert_buf[i+12] = x1
+    qb.vert_buf[i+13] = y1
+    qb.vert_buf[i+14] = z[3]
+
+    qb.vert_buf[i+15] = x0
+    qb.vert_buf[i+16] = y1
+    qb.vert_buf[i+17] = z[2]
 
     i = qb.cursor * 2 * 6
     -- uv0
@@ -586,11 +658,11 @@ function floor_mtx() : [float]
     
     mtx[4] = 0.0f
     mtx[5] = 0.0f
-    mtx[6] = -1.0f
+    mtx[6] = 1.0f
     mtx[7] = 0.0f
     
     mtx[8] = 0.0f
-    mtx[9] = 1.0f
+    mtx[9] = -1.0f
     mtx[10] = 0.0f
     mtx[11] = 0.0f
     
@@ -617,12 +689,6 @@ function mtx_mul(a:[float], b:[float]) : [float]
             d = d + 1
         end
         c = c + 1
-    end
-    
-    local q = 0
-    while q < 16 do
-        io.println(mtx[q])
-        q = q + 1
     end
     return mtx
 end
@@ -835,22 +901,53 @@ function loop_end()
         C.glfwPollEvents()
 end
 
+local floorsize:int = 256
 
-function draw_floor(qb:QuadBatch)
+struct HF
+    heights : @[65536:float];
+end
+
+local floordata:[@HF] = [2:@HF];
+
+function gen_floor(qb:QuadBatch, gridsize:int)
     local u = 0
     qb_begin(qb);
-    while u < 64 do
-        local x:float = float(u) - 32.0f
+    local uvs = 1.0f / float(gridsize);
+    while u < (gridsize-1) do
+        local x:float = float(u) - 0.5f * float(gridsize)
         local v = 0
-        while v < 64 do
-            local y:float = float(v) - 32.0f
-            qb_add(qb, x, y, x + 0.9f, y + 0.9f, 0.0f, 0.0f, 1.0f, 1.0f)
+        while v < (gridsize-1) do
+            local y:float = float(v) - 0.5f * float(gridsize)
+            qb_add(qb, x, y, x + 1.0f, y + 1.0f, uvs*float(u), uvs*float(v), uvs*float(u+1), uvs*float(v+1))
             v = v + 1
         end
         u = u + 1
     end
     qb_end(qb)
-    qb_render(qb)
+end
+
+function floor_sim(src:int, dst:int)
+    local u = 1
+    local c2 = 12.0f
+
+    local s = floordata[src].heights
+    local d = floordata[dst].heights
+
+    local dt = 0.12f
+
+    while u < (floorsize-1) do
+        local v = 1
+        while v < (floorsize-1) do
+            local idx = 256 * u + v;
+
+            local f = c2 * (s[idx-1] + s[idx+1] + s[idx-floorsize] + s[idx+floorsize] - 4.0f * s[idx]);
+            local vel = (s[idx] - d[idx])/dt + f * dt;
+            d[idx] = s[idx] + vel * dt;
+
+            v = v + 1;
+        end
+        u = u + 1;
+    end
 end
 
 function run_floor()
@@ -865,6 +962,30 @@ function run_floor()
     local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx".bytes )
     check_error("(particle) getting locations", false)
 
+    local t:float = 0.0f
+
+    local a=0
+    while a < 8 do
+        local b=0
+        while b < 8 do
+            floordata[0].heights[256*128+128+a+256*b] = 20.0f;
+            floordata[1].heights[256*128+128+a+256*b] = 20.0f;
+            b = b + 1
+        end
+        a = a + 1
+    end
+
+
+    local htex = [1:uint32]
+    C.glGenTextures(1, htex);
+    C.glBindTexture(GL_TEXTURE_2D, htex[0]);
+    C.glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR )
+    C.glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR )
+
+    gen_floor(fb, 512)
+
+    local cur = 1
+
 	while loop_begin() do
             local width  : [int] = [1:int]
             local height : [int] = [1:int]
@@ -875,22 +996,35 @@ function run_floor()
             
             C.glViewport(0,0,width[0],height[0])
             C.glClearColor(1.0f, 0.2f, 0.2f, 1.0f)
-            C.glClear( GL_COLOR_BUFFER_BIT )
-            C.glEnable( GL_BLEND )
-            C.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            C.glDisable( GL_DEPTH_TEST )
+            C.glClear( 0x4100u32 )
+            C.glDisable( GL_BLEND )
+            C.glEnable( GL_DEPTH_TEST )
             C.glDisable( GL_CULL_FACE )
             
             local ortho_mtx = ortho_mtx( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f);
             
             local fov = 2.0f
-            local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 100.0f)
-            local camera = mtx_mul(persp, trans_mtx(0.0f, -5.0f, 0.0f))
+            local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 300.0f)
+            local camera = mtx_mul(persp, trans_mtx(0.0f, -120.0f + 0.0f * float(C.sin(double(t))), -300.0f))
 
             C.glUseProgram(floor_shader)
             C.glUniformMatrix4fv(loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
 
-            draw_floor(fb)
+            -- convert & scale heights
+            local texdata : [float] = [65536:float]
+            local k = 0
+            while k < 65536 do
+                texdata[k] = 0.001f * floordata[cur].heights[k]
+                k = k + 1
+            end
+
+            C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
+
+	    qb_render(fb)
+            floor_sim(cur, 1 - cur)
+            cur = 1 - cur
+
+            t = t + 0.01f
 	    loop_end()
 	end
 end

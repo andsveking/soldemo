@@ -1,0 +1,26 @@
+#version 330
+layout(location = 0) in vec3 pos;
+layout(location = 1) in vec2 uv;
+
+uniform mat4 mtx;
+out vec2 uv0;
+out vec3 world;
+out vec3 normal;
+
+uniform sampler2D tex0;
+
+void main() {
+    vec4 realpos = vec4(pos.x, pos.y, 1000.0 * texture(tex0, uv).r, 1);
+    gl_Position = mtx * realpos;
+    world = pos;
+    uv0 = uv;
+	  
+
+    float rng = 1.0 / 64.0;
+    float dx = texture(tex0, uv0 + vec2(rng, 0)).r - texture(tex0, uv0 + vec2(-rng, 0)).r;
+    float dy = 1 / 1000.0;
+    float dz = texture(tex0, uv0 + vec2(0, rng)).r - texture(tex0, uv0 + vec2(0, -rng)).r;
+
+    normal = normalize(vec3(dx, dy, dz));
+}
+
