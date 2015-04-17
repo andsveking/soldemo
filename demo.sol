@@ -1113,6 +1113,7 @@ local PARTICLE_MODE_EXPLODE : int = 2
 
 local PARTICLE_FIGURE_CUBE   : int = 0
 local PARTICLE_FIGURE_SPHERE : int = 1
+local PARTICLE_FIGURE_PLUSBOX : int = 2
 
 struct ParticleSystem
     local mode : int
@@ -1448,6 +1449,93 @@ function gen_sphere_particles( x : float, y : float, z : float, w : float, h : f
         ps.particle_buf[i].target[1] = tmp2[1];
         ps.particle_buf[i].target[2] = tmp2[2];
         i = i + 1
+    end
+end
+
+function gen_plusbox_particles( ps : ParticleSystem, mtx : [float] )
+    local p:int = 0;
+    local lines:int = 0;
+    local lp:int = 0;
+    local kq:int = 0;
+    local per:int = 0;
+    while p < 2 do
+	if p == 1 then
+		per = MAX_PARTICLE_COUNT / lines
+	end
+	local a:int = 0
+	while a < 3 do
+		------------
+		local x = 0
+		while x < 4 do
+			local y = 0
+			while y < 4 do
+				local q = 0
+				while q < 3 do
+					local u:[float] = [4:float]
+					local v:[float] = [4:float]
+					if a == 0 then
+						u[0] = float(x)
+						u[1] = float(y)
+						u[2] = float(q)
+						v[0] = float(x)
+						v[1] = float(y)
+						v[2] = float(q + 1)
+					elseif a == 1 then
+						u[0] = float(x)
+						u[1] = float(q)
+						u[2] = float(y)
+						v[0] = float(x)
+						v[1] = float(q + 1)
+						v[2] = float(y)
+					elseif a == 2 then
+						u[0] = float(q)
+						u[1] = float(x)
+						u[2] = float(y)
+						v[0] = float(q + 1)
+						v[1] = float(x)
+						v[2] = float(y)
+					end
+					local corn = 0
+					if (x == 0 and y == 0) then
+						corn = 1
+					elseif (x == 3 and y == 0) then
+						corn = 1
+					elseif (x == 3 and y == 3) then
+						corn = 1
+					elseif (x == 0 and y == 3) then
+						corn = 1
+					end
+
+					if ((q == 0 and corn == 0) or (q == 1 and corn == 1) or (q == 2 and corn == 0)) then
+						if p == 0 then
+							lines = lines + 1
+						else
+							u[3] = 1.0f
+							v[3] = 1.0f
+							local b = 0
+							while b < 3 do
+								u[b] = (u[b] - 1.5f) * 50.0f
+								v[b] = (v[b] - 1.5f) * 50.0f
+								b = b + 1
+							end
+							lines = lines - 1
+							if lines == 0 then
+		                                                gen_points_from_line(vec_mul(mtx, u), vec_mul(mtx, v), MAX_PARTICLE_COUNT - lp, ps, lp);
+		                                        else
+		                                                gen_points_from_line(vec_mul(mtx, u), vec_mul(mtx, v), per, ps, lp);
+		                                        end
+	                                                lp = lp + per
+						end
+					end
+					q = q + 1
+				end
+				y = y + 1
+			end
+			x = x + 1
+		end
+		a = a + 1
+	end
+	p = p + 1
     end
 end
 
@@ -1948,17 +2036,23 @@ function run_floor()
                 end
                     -- gen_logo_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
-                --[[if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
-                    -- gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
-                else
+                if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
+                    gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                elseif ( test_psys.figure == PARTICLE_FIGURE_SPHERE) then
                     gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
-                end]]
+                else
+                    gen_plusbox_particles(test_psys, rot_mtx )
+                end
+
+
 
                 if do_switch == 1 then
                     if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
-                            test_psys.figure = PARTICLE_FIGURE_SPHERE
+                        test_psys.figure = PARTICLE_FIGURE_SPHERE
+                    elseif (test_psys.figure == PARTICLE_FIGURE_SPHERE) then
+                        test_psys.figure = PARTICLE_FIGURE_PLUSBOX
                     else
-                            test_psys.figure = PARTICLE_FIGURE_CUBE
+                        test_psys.figure = PARTICLE_FIGURE_CUBE
                     end
                 end
 
@@ -2020,11 +2114,11 @@ function run_floor()
                 p = p + 1
             end
 
-            C.glUseProgram(mesh_shader)
-            local mtxloc : uint32 = C.glGetUniformLocation( mesh_shader, "mtx".bytes )
-            C.glUniformMatrix4fv(mtxloc, 1, true, camera)
-            C.glBindVertexArray(mesh_vbo)
-            C.glDrawArrays( GL_TRIANGLES, 0u32, 48 );
+            -- C.glUseProgram(mesh_shader)
+            -- local mtxloc : uint32 = C.glGetUniformLocation( mesh_shader, "mtx".bytes )
+            -- C.glUniformMatrix4fv(mtxloc, 1, true, camera)
+            -- C.glBindVertexArray(mesh_vbo)
+            -- C.glDrawArrays( GL_TRIANGLES, 0u32, 48 );
 
 
 
