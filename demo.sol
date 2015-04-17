@@ -1029,9 +1029,9 @@ struct Particle
     local speed : float
 end
 
-local PARTICLE_MODE_STATIC : int = 0
-local PARTICLE_MODE_FOLLOW : int = 1
--- local PARTICLE_MODE_FOLLOW = 0
+local PARTICLE_MODE_STATIC  : int = 0
+local PARTICLE_MODE_FOLLOW  : int = 1
+local PARTICLE_MODE_EXPLODE : int = 2
 
 struct ParticleSystem
     local mode : int
@@ -1039,7 +1039,7 @@ struct ParticleSystem
 end
 
 
-local test_psys : ParticleSystem = ParticleSystem { mode = PARTICLE_MODE_FOLLOW }
+local test_psys : ParticleSystem = ParticleSystem { mode = PARTICLE_MODE_STATIC }
 
 function init_meshy_cube()
     test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
@@ -1049,8 +1049,9 @@ function init_meshy_cube()
 
     local i : int = 0
     while (i < MAX_PARTICLE_COUNT) do
-        test_psys.particle_buf[i].pos[0] = 0.0f
-        test_psys.particle_buf[i].pos[1] = 0.0f
+        local a : double = double(random() * 3.14f * 2.0f)
+        test_psys.particle_buf[i].pos[0] = float(C.cos(a)) * 2048.0f
+        test_psys.particle_buf[i].pos[1] = float(C.sin(a)) * 2048.0f
         test_psys.particle_buf[i].pos[2] = 0.0f
 
         i = i + 1
@@ -1656,7 +1657,10 @@ function run_floor()
             local rot_mtx : [float] = mtx_rotate_X(imtx, double(t*1.0f))
             -- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
 
-            gen_cube_particles(0.0f, 100.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            if (to_water > 0.0f) then
+                test_psys.mode = PARTICLE_MODE_FOLLOW;
+                gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            end
 
             C.glUseProgram(particle_shader)
             scene_particle_draw(window, camera, 0.1)
