@@ -1,0 +1,27 @@
+#version 330
+layout(location = 0) in vec2 pos;
+layout(location = 1) in vec2 uv;
+
+uniform mat4 mtx;
+// uniform float anim;
+// uniform float offset;
+// uniform int mode;
+
+out vec2 uv0;
+
+
+void main() {
+    vec2 tpos = pos;
+
+    // if (mode == 0)
+    // {
+    //     tpos.x -= anim;
+    //     tpos.y += sin((tpos.x + tpos.y) * 0.02 ) * 60.0f * tpos.y / 320.0f; //((tpos.y - 0.5f) / 1.0f);
+    // } else {
+    //     tpos.y += abs(sin(tpos.x * 0.01 + anim * 0.04 + offset * 0.2) * 60.0f);
+    // }
+
+    gl_Position = mtx * vec4(tpos, 0.0, 1.0);
+    // gl_Position = mtx * vec4(pos, 0.0, 1.0);
+    uv0 = uv;//(pos + 1.0) * 0.5;
+}
