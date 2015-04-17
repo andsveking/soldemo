@@ -15,6 +15,10 @@ end
 --     local size : int
 -- end
 
+struct WrapPointer
+    local ptr : uint64
+end
+
 struct QuadBatch
     local vert_buf : [float]
     local uv_buf   : [float]
@@ -25,6 +29,45 @@ struct QuadBatch
     local vert_gl : uint32
     local uv_gl   : uint32
     local vao     : uint32
+end
+
+struct FMOD_CREATESOUNDEXINFO
+
+    local cbsize : int;             -- [w] Size of this structure.  This is used so the structure can be expanded in the future and still work on older versions of FMOD Ex. */
+    local length : uint32;             -- [w] Optional. Specify 0 to ignore. Size in bytes of file to load, or sound to create (in this case only if FMOD_OPENUSER is used).  Required if loading from memory.  If 0 is specified, then it will use the size of the file (unless loading from memory then an error will be returned). */
+    local fileoffset : uint32;         -- [w] Optional. Specify 0 to ignore. Offset from start of the file to start loading from.  This is useful for loading files from inside big data files. */
+    local numchannels : int;        -- [w] Optional. Specify 0 to ignore. Number of channels in a sound mandatory if FMOD_OPENUSER or FMOD_OPENRAW is used. */
+    local defaultfrequency : int;   -- [w] Optional. Specify 0 to ignore. Default frequency of sound in a sound mandatory if FMOD_OPENUSER or FMOD_OPENRAW is used.  Other formats use the frequency determined by the file format. */
+    local format : uint64;             -- [w] Optional. Specify 0 or FMOD_SOUND_FORMAT_NONE to ignore. Format of the sound mandatory if FMOD_OPENUSER or FMOD_OPENRAW is used.  Other formats use the format determined by the file format.   */
+    local decodebuffersize : uint32;   -- [w] Optional. Specify 0 to ignore. For streams.  This determines the size of the double buffer (in PCM samples) that a stream uses.  Use this for user created streams if you want to determine the size of the callback buffer passed to you.  Specify 0 to use FMOD's default size which is currently equivalent to 400ms of the sound format created/loaded. */
+    local initialsubsound : int;    -- [w] Optional. Specify 0 to ignore. In a multi-sample file format such as .FSB/.DLS/.SF2, specify the initial subsound to seek to, only if FMOD_CREATESTREAM is used. */
+    local numsubsounds : int;       -- [w] Optional. Specify 0 to ignore or have no subsounds.  In a sound created with FMOD_OPENUSER, specify the number of subsounds that are accessable with Sound::getSubSound.  If not created with FMOD_OPENUSER, this will limit the number of subsounds loaded within a multi-subsound file.  If using FSB, then if FMOD_CREATESOUNDEXINFO::inclusionlist is used, this will shuffle subsounds down so that there are not any gaps.  It will mean that the indices of the sounds will be different. */
+    local inclusionlist : uint32;      -- [w] Optional. Specify 0 to ignore. In a multi-sample format such as .FSB/.DLS/.SF2 it may be desirable to specify only a subset of sounds to be loaded out of the whole file.  This is an array of subsound indices to load into memory when created. */
+    local inclusionlistnum : int;   -- [w] Optional. Specify 0 to ignore. This is the number of integers contained within the inclusionlist array. */
+    local pcmreadcallback : uint64;    -- [w] Optional. Specify 0 to ignore. Callback to 'piggyback' on FMOD's read functions and accept or even write PCM data while FMOD is opening the sound.  Used for user sounds created with FMOD_OPENUSER or for capturing decoded data as FMOD reads it. */
+    local pcmsetposcallback : uint64;  -- [w] Optional. Specify 0 to ignore. Callback for when the user calls a seeking function such as Channel::setTime or Channel::setPosition within a multi-sample sound, and for when it is opened.*/
+    local nonblockcallback : uint64;   -- [w] Optional. Specify 0 to ignore. Callback for successful completion, or error while loading a sound that used the FMOD_NONBLOCKING flag.  Also called duing seeking, when setPosition is called or a stream is restarted. */
+    local dlsname : String;            -- [w] Optional. Specify 0 to ignore. Filename for a DLS or SF2 sample set when loading a MIDI file. If not specified, on Windows it will attempt to open /windows/system32/drivers/gm.dls or /windows/system32/drivers/etc/gm.dls, on Mac it will attempt to load /System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls, otherwise the MIDI will fail to open. Current DLS support is for level 1 of the specification. */
+    local encryptionkey : String;      -- [w] Optional. Specify 0 to ignore. Key for encrypted FSB file.  Without this key an encrypted FSB file will not load. */
+    local maxpolyphony : int;       -- [w] Optional. Specify 0 to ignore. For sequenced formats with dynamic channel allocation such as .MID and .IT, this specifies the maximum voice count allowed while playing.  .IT defaults to 64.  .MID defaults to 32. */
+    local userdata : uint64;           -- [w] Optional. Specify 0 to ignore. This is user data to be attached to the sound during creation.  Access via Sound::getUserData.  Note: This is not passed to FMOD_FILE_OPENCALLBACK, that is a different userdata that is file specific. */
+    local suggestedsoundtype : uint64; -- [w] Optional. Specify 0 or FMOD_SOUND_TYPE_UNKNOWN to ignore.  Instead of scanning all codec types, use this to speed up loading by making it jump straight to this codec. */
+    local useropen : uint64;           -- [w] Optional. Specify 0 to ignore. Callback for opening this file. */
+    local userclose : uint64;          -- [w] Optional. Specify 0 to ignore. Callback for closing this file. */
+    local userread : uint64;           -- [w] Optional. Specify 0 to ignore. Callback for reading from this file. */
+    local userseek : uint64;           -- [w] Optional. Specify 0 to ignore. Callback for seeking within this file. */
+    local userasyncread : uint64;      -- [w] Optional. Specify 0 to ignore. Callback for seeking within this file. */
+    local userasynccancel : uint64;    -- [w] Optional. Specify 0 to ignore. Callback for seeking within this file. */
+    local speakermap : uint64;         -- [w] Optional. Specify 0 to ignore. Use this to differ the way fmod maps multichannel sounds to speakers.  See FMOD_SPEAKERMAPTYPE for more. */
+    local initialsoundgroup : uint64;  -- [w] Optional. Specify 0 to ignore. Specify a sound group if required, to put sound in as it is created. */
+    local initialseekposition : uint32;-- [w] Optional. Specify 0 to ignore. For streams. Specify an initial position to seek the stream to. */
+    local initialseekpostype : uint64; -- [w] Optional. Specify 0 to ignore. For streams. Specify the time unit for the position set in initialseekposition. */
+    local ignoresetfilesystem : int;-- [w] Optional. Specify 0 to ignore. Set to 1 to use fmod's built in file system. Ignores setFileSystem callbacks and also FMOD_CREATESOUNEXINFO file callbacks.  Useful for specific cases where you don't want to use your own file system but want to use fmod's file system (ie net streaming). */
+    local cddaforceaspi : int;      -- [w] Optional. Specify 0 to ignore. For CDDA sounds only - if non-zero use ASPI instead of NTSCSI to access the specified CD/DVD device. */
+    local audioqueuepolicy : uint32;   -- [w] Optional. Specify 0 or FMOD_AUDIOQUEUE_CODECPOLICY_DEFAULT to ignore. Policy used to determine whether hardware or software is used for decoding, see FMOD_AUDIOQUEUE_CODECPOLICY for options (iOS >= 3.0 required, otherwise only hardware is available) */
+    local minmidigranularity : uint32; -- [w] Optional. Specify 0 to ignore. Allows you to set a minimum desired MIDI mixer granularity. Values smaller than 512 give greater than default accuracy at the cost of more CPU and vice versa. Specify 0 for default (512 samples). */
+    local nonblockthreadid : int;   -- [w] Optional. Specify 0 to ignore. Specifies a thread index to execute non blocking load on.  Allows for up to 5 threads to be used for loading at once.  This is to avoid one load blocking another.  Maximum value = 4. */
+
 end
 
 ------------------------------------------------------------------
@@ -93,12 +136,20 @@ extern C
         function glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [byte])
         function glTexParameteri( target : uint32, pname : uint32, param : uint32 )
 
+    -- FMOD: Core
+    -- function FMOD_ErrorString(errcode : uint64) : String
+    function FMOD_System_Create(system : [@WrapPointer]) : uint64
+    function FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
+    function FMOD_System_CreateSound(system : uint64, path : [byte], mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
+    function FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
+
     -- C Std funcs
     function fopen( filename : [byte], mode : [byte] ) : uint64
     function fseek( stream : uint64, offset : int64, whence : int ) : int
     function ftell( stream : uint64 ) : int
     function fclose( stream : uint64 ) : int
     function fread( ptr : [byte], size : int, count : int, stream : uint64) : int64
+    function chdir(path : String) : int
     function rand() : int
     function sin(a : double) : double
     function cos(a : double) : double
@@ -157,6 +208,136 @@ local SEEK_CUR            : int = 1
 local SEEK_END            : int = 2
 
 local RAND_MAX            : int = 2147483647
+
+local FMOD_OK             : uint64 = 0u64
+local FMOD_ERR_ALREADYLOCKED : uint64          = 1u64
+local FMOD_ERR_BADCOMMAND : uint64             = 2u64
+local FMOD_ERR_CDDA_DRIVERS : uint64           = 3u64
+local FMOD_ERR_CDDA_INIT : uint64              = 4u64
+local FMOD_ERR_CDDA_INVALID_DEVICE : uint64    = 5u64
+local FMOD_ERR_CDDA_NOAUDIO : uint64           = 6u64
+local FMOD_ERR_CDDA_NODEVICES : uint64         = 7u64
+local FMOD_ERR_CDDA_NODISC : uint64            = 8u64
+local FMOD_ERR_CDDA_READ : uint64              = 9u64
+local FMOD_ERR_CHANNEL_ALLOC : uint64          = 10u64
+local FMOD_ERR_CHANNEL_STOLEN : uint64         = 11u64
+local FMOD_ERR_COM : uint64                    = 12u64
+local FMOD_ERR_DMA : uint64                    = 13u64
+local FMOD_ERR_DSP_CONNECTION : uint64         = 14u64
+local FMOD_ERR_DSP_FORMAT : uint64             = 15u64
+local FMOD_ERR_DSP_NOTFOUND : uint64           = 16u64
+local FMOD_ERR_DSP_RUNNING : uint64            = 17u64
+local FMOD_ERR_DSP_TOOMANYCONNECTIONS : uint64 = 18u64
+local FMOD_ERR_FILE_BAD : uint64               = 19u64
+local FMOD_ERR_FILE_COULDNOTSEEK : uint64      = 20u64
+local FMOD_ERR_FILE_DISKEJECTED : uint64       = 21u64
+local FMOD_ERR_FILE_EOF : uint64               = 22u64
+local FMOD_ERR_FILE_NOTFOUND : uint64          = 23u64
+local FMOD_ERR_FILE_UNWANTED : uint64          = 24u64
+local FMOD_ERR_FORMAT : uint64                 = 25u64
+local FMOD_ERR_HTTP : uint64                   = 26u64
+local FMOD_ERR_HTTP_ACCESS : uint64            = 27u64
+local FMOD_ERR_HTTP_PROXY_AUTH : uint64        = 28u64
+local FMOD_ERR_HTTP_SERVER_ERROR : uint64      = 29u64
+local FMOD_ERR_HTTP_TIMEOUT : uint64           = 30u64
+local FMOD_ERR_INITIALIZATION : uint64         = 31u64
+local FMOD_ERR_INITIALIZED : uint64            = 32u64
+local FMOD_ERR_INTERNAL : uint64               = 33u64
+local FMOD_ERR_INVALID_ADDRESS : uint64        = 34u64
+local FMOD_ERR_INVALID_FLOAT : uint64          = 35u64
+local FMOD_ERR_INVALID_HANDLE : uint64         = 36u64
+local FMOD_ERR_INVALID_PARAM : uint64          = 37u64
+local FMOD_ERR_INVALID_POSITION : uint64       = 38u64
+local FMOD_ERR_INVALID_SPEAKER : uint64        = 39u64
+local FMOD_ERR_INVALID_SYNCPOINT : uint64      = 40u64
+local FMOD_ERR_INVALID_VECTOR : uint64         = 41u64
+local FMOD_ERR_MAXAUDIBLE : uint64             = 42u64
+local FMOD_ERR_MEMORY : uint64                 = 43u64
+local FMOD_ERR_MEMORY_CANTPOINT : uint64       = 44u64
+local FMOD_ERR_MEMORY_SRAM : uint64            = 45u64
+local FMOD_ERR_NEEDS2D : uint64                = 46u64
+local FMOD_ERR_NEEDS3D : uint64                = 47u64
+local FMOD_ERR_NEEDSHARDWARE : uint64          = 48u64
+local FMOD_ERR_NEEDSSOFTWARE : uint64          = 49u64
+local FMOD_ERR_NET_CONNECT : uint64            = 50u64
+local FMOD_ERR_NET_SOCKET_ERROR : uint64       = 51u64
+local FMOD_ERR_NET_URL : uint64                = 52u64
+local FMOD_ERR_NET_WOULD_BLOCK : uint64        = 53u64
+local FMOD_ERR_NOTREADY : uint64               = 54u64
+local FMOD_ERR_OUTPUT_ALLOCATED : uint64       = 55u64
+local FMOD_ERR_OUTPUT_CREATEBUFFER : uint64    = 56u64
+local FMOD_ERR_OUTPUT_DRIVERCALL : uint64      = 57u64
+local FMOD_ERR_OUTPUT_ENUMERATION : uint64     = 58u64
+local FMOD_ERR_OUTPUT_FORMAT : uint64          = 59u64
+local FMOD_ERR_OUTPUT_INIT : uint64            = 60u64
+local FMOD_ERR_OUTPUT_NOHARDWARE : uint64      = 61u64
+local FMOD_ERR_OUTPUT_NOSOFTWARE : uint64      = 62u64
+local FMOD_ERR_PAN : uint64                    = 63u64
+local FMOD_ERR_PLUGIN : uint64                 = 64u64
+local FMOD_ERR_PLUGIN_INSTANCES : uint64       = 65u64
+local FMOD_ERR_PLUGIN_MISSING : uint64         = 66u64
+local FMOD_ERR_PLUGIN_RESOURCE : uint64        = 67u64
+local FMOD_ERR_PRELOADED : uint64              = 68u64
+local FMOD_ERR_PROGRAMMERSOUND : uint64        = 69u64
+local FMOD_ERR_RECORD : uint64                 = 70u64
+local FMOD_ERR_REVERB_INSTANCE : uint64        = 71u64
+local FMOD_ERR_SUBSOUND_ALLOCATED : uint64     = 72u64
+local FMOD_ERR_SUBSOUND_CANTMOVE : uint64      = 73u64
+local FMOD_ERR_SUBSOUND_MODE : uint64          = 74u64
+local FMOD_ERR_SUBSOUNDS : uint64              = 75u64
+local FMOD_ERR_TAGNOTFOUND : uint64            = 76u64
+local FMOD_ERR_TOOMANYCHANNELS : uint64        = 77u64
+local FMOD_ERR_UNIMPLEMENTED : uint64          = 78u64
+local FMOD_ERR_UNINITIALIZED : uint64          = 79u64
+local FMOD_ERR_UNSUPPORTED : uint64            = 80u64
+local FMOD_ERR_UPDATE : uint64                 = 81u64
+local FMOD_ERR_VERSION : uint64                = 82u64
+local FMOD_ERR_EVENT_FAILED : uint64           = 83u64
+local FMOD_ERR_EVENT_INFOONLY : uint64         = 84u64
+local FMOD_ERR_EVENT_INTERNAL : uint64         = 85u64
+local FMOD_ERR_EVENT_MAXSTREAMS : uint64       = 86u64
+local FMOD_ERR_EVENT_MISMATCH : uint64         = 87u64
+local FMOD_ERR_EVENT_NAMECONFLICT : uint64     = 88u64
+local FMOD_ERR_EVENT_NOTFOUND : uint64         = 89u64
+local FMOD_ERR_EVENT_NEEDSSIMPLE : uint64      = 90u64
+local FMOD_ERR_EVENT_GUIDCONFLICT : uint64     = 91u64
+local FMOD_ERR_EVENT_ALREADY_LOADED : uint64   = 92u64
+local FMOD_ERR_MUSIC_UNINITIALIZED : uint64    = 93u64
+local FMOD_ERR_MUSIC_NOTFOUND : uint64         = 94u64
+local FMOD_ERR_MUSIC_NOCALLBACK : uint64       = 95u64
+
+local FMOD_DEFAULT                   : uint64 = 0x00000000u64
+local FMOD_LOOP_OFF                  : uint64 = 0x00000001u64
+local FMOD_LOOP_NORMAL               : uint64 = 0x00000002u64
+local FMOD_LOOP_BIDI                 : uint64 = 0x00000004u64
+local FMOD_2D                        : uint64 = 0x00000008u64
+local FMOD_3D                        : uint64 = 0x00000010u64
+local FMOD_HARDWARE                  : uint64 = 0x00000020u64
+local FMOD_SOFTWARE                  : uint64 = 0x00000040u64
+local FMOD_CREATESTREAM              : uint64 = 0x00000080u64
+local FMOD_CREATESAMPLE              : uint64 = 0x00000100u64
+local FMOD_CREATECOMPRESSEDSAMPLE    : uint64 = 0x00000200u64
+local FMOD_OPENUSER                  : uint64 = 0x00000400u64
+local FMOD_OPENMEMORY                : uint64 = 0x00000800u64
+local FMOD_OPENMEMORY_POINT          : uint64 = 0x10000000u64
+local FMOD_OPENRAW                   : uint64 = 0x00001000u64
+local FMOD_OPENONLY                  : uint64 = 0x00002000u64
+local FMOD_ACCURATETIME              : uint64 = 0x00004000u64
+local FMOD_MPEGSEARCH                : uint64 = 0x00008000u64
+local FMOD_NONBLOCKING               : uint64 = 0x00010000u64
+local FMOD_UNIQUE                    : uint64 = 0x00020000u64
+local FMOD_3D_HEADRELATIVE           : uint64 = 0x00040000u64
+local FMOD_3D_WORLDRELATIVE          : uint64 = 0x00080000u64
+local FMOD_3D_INVERSEROLLOFF         : uint64 = 0x00100000u64
+local FMOD_3D_LINEARROLLOFF          : uint64 = 0x00200000u64
+local FMOD_3D_LINEARSQUAREROLLOFF    : uint64 = 0x00400000u64
+local FMOD_3D_CUSTOMROLLOFF          : uint64 = 0x04000000u64
+local FMOD_3D_IGNOREGEOMETRY         : uint64 = 0x40000000u64
+local FMOD_UNICODE                   : uint64 = 0x01000000u64
+local FMOD_IGNORETAGS                : uint64 = 0x02000000u64
+local FMOD_LOWMEM                    : uint64 = 0x08000000u64
+local FMOD_LOADSECONDARYRAM          : uint64 = 0x20000000u64
+local FMOD_VIRTUAL_PLAYFROMSTART     : uint64 = 0x80000000u64
 
 ------------------------------------------------------------------------
 -- Helpers
@@ -725,6 +906,56 @@ function render( window : uint64, delta : double )
 
 end
 
+function init_audio() : uint64
+    local system_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
+    if (C.FMOD_System_Create(system_ptr_wrap) ~= FMOD_OK) then
+        log_error("could not create FMOD system")
+        return 0u64
+    end
+    local fmod_system = system_ptr_wrap[0].ptr
+
+    if (C.FMOD_System_Init(fmod_system, 32, 0u64, 0u64) ~= FMOD_OK) then
+        log_error("could not init FMOD")
+        return 0u64
+    end
+    -- io.println(apa[0].ptr[0])
+
+    log_ok("FMOD initiated")
+
+    return fmod_system
+end
+
+
+function load_sound( fmod_system : uint64, path : String ) : uint64
+
+    local sound_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
+    -- local extinfo : [FMOD_CREATESOUNDEXINFO] = [1:FMOD_CREATESOUNDEXINFO]
+    -- extinfo[0] =
+    local res : uint64 = C.FMOD_System_CreateSound( fmod_system, path.bytes, 0x40u64, 0u64, sound_ptr_wrap)
+
+    if (res ~= FMOD_OK) then
+        log_error("(" .. path .. ") could not create sound: ")
+        io.println(res)
+        -- log_error("(" .. path .. ") could not create sound: " .. C.FMOD_ErrorString(res))
+        return 0u64
+    end
+
+    local sound_ptr = sound_ptr_wrap[0].ptr
+
+    return sound_ptr
+end
+
+function play_sound( fmod_system : uint64, fmod_sound : uint64 )
+    local channel_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
+    local res : uint64 = C.FMOD_System_PlaySound( fmod_system, -1, fmod_sound, false, channel_ptr_wrap)
+    if (res ~= FMOD_OK) then
+        log_error("could not play sound: ")
+        io.println(res)
+        -- log_error("(" .. path .. ") could not create sound: " .. C.FMOD_ErrorString(res))
+    end
+end
+
+
 local line1 : String = "SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL"
 local line2 : String = "awesome scroller! check it... - leet haxxxx - very lua - much types"
 local line3 : String = "awesome scroller - check it"
@@ -733,6 +964,8 @@ local line3 : String = "awesome scroller - check it"
 function main(): int
 
     create_lut()
+
+    -- C.chdir("/Users/svenandersson/Documents/development/demo/")
 
     if (C.glfwInit() == 0) then
         return -1
@@ -749,6 +982,11 @@ function main(): int
 
     if (window ~= 0u64) then
         C.glfwShowWindow( window )
+
+        -- init audio and load sound
+        local sound_system = init_audio()
+        local drum_sound = load_sound( sound_system, "data/music/skadad.mp3" )
+        play_sound( sound_system, drum_sound )
 
         local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
         -- io.println("vertex_src: " .. vertex_src)
