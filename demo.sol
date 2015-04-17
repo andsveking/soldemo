@@ -20,6 +20,10 @@ struct WrapPointer
     local ptr : uint64
 end
 
+struct WrapUInt64
+    local val : uint64
+end
+
 struct QuadBatch
     local vert_buf : [float]
     local uv_buf   : [float]
@@ -144,6 +148,7 @@ extern C
     function FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
     function FMOD_System_CreateSound(system : uint64, path : [byte], mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
     function FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
+	function FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
 
     -- C Std funcs
     function fopen( filename : [byte], mode : [byte] ) : uint64
@@ -909,6 +914,16 @@ function mtx_mul(a:[float], b:[float]) : [float]
     return mtx
 end
 
+function vec_mul(mtx:[float], vec:[float]) : [float]
+    local out : [float] = [4:float]
+	local k = 0
+	while k < 4 do
+		out[k] = mtx[4*k+0] * vec[0] + mtx[4*k+1] * vec[1] + mtx[4*k+2] * vec[2] + mtx[4*k+3] * vec[3];
+		k = k + 1;
+	end
+    return out
+end
+
 -- ugly LUT
 local lut_u : [float] = [16*16:float]
 local lut_v : [float] = [16*16:float]
@@ -1393,6 +1408,7 @@ struct HF
 end
 
 local floordata:[@HF] = [2:@HF];
+local music_channel:uint64;
 
 function gen_floor(qb:QuadBatch, gridsize:int)
     local u = 0
@@ -1413,7 +1429,7 @@ end
 
 function floor_sim(src:int, dst:int)
     local u = 1
-    local c2 = 12.0f
+    local c2 = 30.0f
 
     local s = floordata[src].heights
     local d = floordata[dst].heights
@@ -1427,7 +1443,7 @@ function floor_sim(src:int, dst:int)
 
             local f = c2 * (s[idx-1] + s[idx+1] + s[idx-floorsize] + s[idx+floorsize] - 4.0f * s[idx]);
             local vel = (s[idx] - d[idx])/dt + f * dt;
-            d[idx] = s[idx] + vel * dt;
+            d[idx] = 0.98f * (s[idx] + vel * dt);
 
             v = v + 1;
         end
@@ -1453,18 +1469,9 @@ function run_floor()
     local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx".bytes )
     check_error("(particle) getting locations", false)
 
-    local t:float = 0.0f
+    local water_fade:int = C.glGetUniformLocation( floor_shader, "waterFade".bytes );
 
-    local a=0
-    while a < 8 do
-        local b=0
-        while b < 8 do
-            floordata[0].heights[256*128+128+a+256*b] = 20.0f;
-            floordata[1].heights[256*128+128+a+256*b] = 20.0f;
-            b = b + 1
-        end
-        a = a + 1
-    end
+    local t:float = 0.0f
 
 
     local htex = [1:uint32]
@@ -1478,16 +1485,36 @@ function run_floor()
     local cur = 1
     local anim = 0.0f
 
+
+	local last_time_stamp = C.glfwGetTime();
+	local start_time = C.glfwGetTime();
+
+	local to_water:float = 0.0f;
+
 	while loop_begin() do
             local width  : [int] = [1:int]
             local height : [int] = [1:int]
+
+            local delta = C.glfwGetTime() - last_time_stamp
+            last_time_stamp = C.glfwGetTime()
+
+
+			local tm:[@WrapUInt64] = [1:@WrapUInt64];
+			C.FMOD_Channel_GetPosition(music_channel, tm, 1u64);
+
+			if tm[0].val > 2000u64 then
+				to_water = to_water + (1.0f - to_water) * 3.0f * float(delta)
+				if to_water > 1.0f then
+					to_water = 1.0f
+				end
+			end
 
             C.glfwGetFramebufferSize( window, width, height )
             local widthf : float = float(width[0])
             local heightf : float = float(height[0])
 
             C.glViewport(0,0,width[0],height[0])
-            C.glClearColor(1.0f, 0.2f, 0.2f, 1.0f)
+            C.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
             C.glClear( 0x4100u32 )
             C.glDisable( GL_BLEND )
             C.glEnable( GL_DEPTH_TEST )
@@ -1499,10 +1526,10 @@ function run_floor()
 
             local fov = 2.0f
             local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 300.0f)
-            local camera = mtx_mul(persp, trans_mtx(0.0f, -120.0f + 0.0f * float(C.sin(double(t))), -300.0f))
+            local camera = mtx_mul(persp, trans_mtx(0.0f, -60.0f, -200.0f))
 
             C.glUseProgram(floor_shader)
-            C.glUniformMatrix4fv(loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
+            C.glUniformMatrix4fv(loc_mtx, 1, true, camera)
 
             -- convert & scale heights
             local texdata : [float] = [65536:float]
@@ -1513,16 +1540,32 @@ function run_floor()
             end
 
             C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
+            C.glUniform1f(water_fade, to_water);
 
-	    qb_render(fb)
+	        qb_render(fb)
             floor_sim(cur, 1 - cur)
             cur = 1 - cur
 
+
+            -- particles
             gen_cube_particles( float(C.sin(double(t))) * 100.0f, float(C.cos(double(t))) * 100.0f, 0.0f, 200.0f, 200.0f, 200.0f, test_psys )
 
             C.glUseProgram(particle_shader)
             C.glUniformMatrix4fv(particle_loc_mtx, 1, true, mtx_mul(camera, floor_mtx()))
             scene_particle_draw(window, mtx_mul(camera, floor_mtx()), 0.1)
+
+	        local px:int = int(float(C.sin(double(2.0f*t))*64.0))+128;
+	        local py:int = int(float(C.cos(double(3.0f*t))*64.0))+128;
+            local a=0
+            while a < 0 do
+                local b=0
+                while b < 4 do
+                    floordata[cur].heights[(py+a)+256*(b+px)] = -10.0f;
+                    b = b + 1
+                end
+                a = a + 1
+            end
+
 
             t = t + 0.01f
 	    loop_end()
@@ -1570,7 +1613,7 @@ function load_sound( fmod_system : uint64, path : String ) : uint64
     return sound_ptr
 end
 
-function play_sound( fmod_system : uint64, fmod_sound : uint64 )
+function play_sound( fmod_system : uint64, fmod_sound : uint64 ) : uint64
     local channel_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
     local res : uint64 = C.FMOD_System_PlaySound( fmod_system, -1, fmod_sound, false, channel_ptr_wrap)
     if (res ~= FMOD_OK) then
@@ -1578,6 +1621,7 @@ function play_sound( fmod_system : uint64, fmod_sound : uint64 )
 --        io.println(res)
         -- log_error("(" .. path .. ") could not create sound: " .. C.FMOD_ErrorString(res))
     end
+	return channel_ptr_wrap[0].ptr;
 end
 
 local line1 : String = "SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL"
@@ -1610,7 +1654,7 @@ function main(): int
         -- init audio and load sound
         local sound_system = init_audio()
         local drum_sound = load_sound( sound_system, "data/music/skadad.mp3" )
-        play_sound( sound_system, drum_sound )
+        music_channel = play_sound( sound_system, drum_sound )
 
         local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
         -- io.println("vertex_src: " .. vertex_src)

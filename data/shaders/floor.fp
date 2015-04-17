@@ -5,9 +5,7 @@ in vec3 normal;
 out vec4 fragColor;
 
 uniform sampler2D tex0;
-uniform float anim;
-uniform float offset;
-uniform int mode;
+uniform float waterFade;
 
 vec3 hsv2rgb(vec3 c)
 {
@@ -17,18 +15,30 @@ vec3 hsv2rgb(vec3 c)
 }
 
 void main() {
-	vec4 mat;
-	if ((int(floor(uv0.x*64) + floor(uv0.y*64)) & 1) == 0)
+	vec4 mat, stdmat;
+
+	vec3 campos = vec3(0,50,100);
+	vec3 incoming = normalize(world - campos);
+	vec3 fake = normalize(incoming - 0.05f * (normal - vec3(0,1,0)));
+
+	float tobottom = world.y + 40;
+	float length = -tobottom / fake.y;
+	vec3 target = campos + length * fake;
+
+	if ((int(floor(target.x/12) + floor(target.z/12)) & 1) == 0)
+	{
+		stdmat = vec4(1,1,1,1);
 		mat = vec4(0.0, 0.1, 0.2, 1.0);
+	}
 	else
+	{
+		stdmat = vec4(0,0,0,1);
 		mat = vec4(0.0, 0.3, 0.4, 1.0);
+	}
 
-//	float atten = 500 / (10 + world.x * world.x + world.y * world.y);
-//	mat = atten * mat;
+	float atten = 25000 / (1000 + world.x * world.x + world.z * world.z);
+	mat = atten * mat;
 
-	float spec = pow(dot(normal, vec3(-0.4,0,-.4)), 4);
-
-	fragColor = mat + vec4(1,1,1,1) * spec;
-
-//	fragColor = vec4(1,1,1,1) * dot(normal, vec3(0,1,0)); //mat * texture(tex0, uv0).rrrr;
+	float spec = pow(dot(normal, vec3(0,0,1)), 5);
+	fragColor = mix(stdmat, mat + vec4(1,1,1,1) * spec * 1, waterFade);
 }
