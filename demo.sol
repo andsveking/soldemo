@@ -1890,8 +1890,6 @@ function run_floor()
 	    local dip_mtx = trans_mtx(sin(psyk_t)*move*200.0f,cos(psyk_t*3.0f) * 200.0f - 50.0f,cos(psyk_t*0.74f)*move*200.0f);
 	    rot_mtx = mtx_mul(dip_mtx, rot_mtx);
 	    
-	    water_t = 1.0f
-
             if water_t > 0.0f then
 
                 if (test_psys.mode == PARTICLE_MODE_STATIC) then
@@ -1903,7 +1901,6 @@ function run_floor()
 		else
                     gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
                 end
-                    gen_plusbox_particles(test_psys, rot_mtx )
 
 		if do_switch == 1 then
                     if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
