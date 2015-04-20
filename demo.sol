@@ -2069,8 +2069,6 @@ function run_floor()
                     gen_plusbox_particles(test_psys, rot_mtx )
                 end
 
-
-
                 if do_switch == 1 then
                     if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
                         test_psys.figure = PARTICLE_FIGURE_SPHERE
