@@ -475,31 +475,31 @@ function create_texture( width : int, height : int, data : [byte] ) : uint32
     return texture
 end
 
-function create_mesh_from_file( path : String ) : uint32
+-- function create_mesh_from_file( path : String ) : uint32
 
-    local raw_data : [byte] = read_file( path )
+--     local raw_data : [byte] = read_file( path )
 
-    io.println(#raw_data)
+--     io.println(#raw_data)
 
-    -- generate gl buffers
-    local buffers : [uint32] = [1:uint32]
-    C.glGenBuffers(1, buffers)
-    local vert_gl = buffers[0]
+--     -- generate gl buffers
+--     local buffers : [uint32] = [1:uint32]
+--     C.glGenBuffers(1, buffers)
+--     local vert_gl = buffers[0]
 
-    local vao : [uint32] = [1:uint32]
-    C.glGenVertexArrays( 1, vao )
-    local vao_obj = vao[0]
+--     local vao : [uint32] = [1:uint32]
+--     C.glGenVertexArrays( 1, vao )
+--     local vao_obj = vao[0]
 
-    C.glBindVertexArray(vao_obj)
-    C.glEnableVertexAttribArray( 0 )
-    C.glBindBuffer( GL_ARRAY_BUFFER, vert_gl )
-    C.glBufferData( GL_ARRAY_BUFFER, #raw_data, raw_data, GL_STATIC_DRAW )
-    C.glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
-    C.glBindVertexArray(0u32)
+--     C.glBindVertexArray(vao_obj)
+--     C.glEnableVertexAttribArray( 0 )
+--     C.glBindBuffer( GL_ARRAY_BUFFER, vert_gl )
+--     C.glBufferData( GL_ARRAY_BUFFER, #raw_data, raw_data, GL_STATIC_DRAW )
+--     C.glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
+--     C.glBindVertexArray(0u32)
 
-    return vao_obj
+--     return vao_obj
 
-end
+-- end
 
 function create_quad_batch( capacity : int ) : QuadBatch
     local qb : QuadBatch = QuadBatch { vert_gl  = 0u32,
@@ -1686,9 +1686,9 @@ function scene_particle_init()
     particle_qb = create_quad_batch( particle_amount )
 
 
-    local vertex_mesh_src : String = read_file_as_string("data/shaders/mesh.vp")
-    mesh_shader = create_shader( vertex_mesh_src, fragment_src )
-    check_error("(mesh) create shader", false)
+    -- local vertex_mesh_src : String = read_file_as_string("data/shaders/mesh.vp")
+    -- mesh_shader = create_shader( vertex_mesh_src, fragment_src )
+    -- check_error("(mesh) create shader", false)
 
     init_meshy_cube()
 
@@ -1776,6 +1776,31 @@ end
 function scene_particle_release()
 
     apa = ""
+
+end
+
+function create_mesh( path : String ) : uint32
+
+    local buffers : [uint32] = [1:uint32]
+    C.glGenBuffers( 1, buffers )
+    C.glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
+
+    local data : [byte] = read_file( path )
+    io.println(#data)
+
+    C.glBufferData( GL_ARRAY_BUFFER, #data, data, GL_STATIC_DRAW )
+    check_error( "loading mesh geo buffers", true )
+
+    local vao : [uint32] = [1:uint32]
+    C.glGenVertexArrays( 1, vao );
+    C.glBindVertexArray(vao[0]);
+
+    C.glEnableVertexAttribArray( 0 )
+    C.glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
+    C.glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0);
+
+    -- return buffers[0]
+    return vao[0]
 
 end
 
@@ -2115,7 +2140,7 @@ function run_floor()
             end
 
             -- C.glUseProgram(mesh_shader)
-            -- local mtxloc : uint32 = C.glGetUniformLocation( mesh_shader, "mtx".bytes )
+            -- local mtxloc = C.glGetUniformLocation( mesh_shader, "mtx".bytes )
             -- C.glUniformMatrix4fv(mtxloc, 1, true, camera)
             -- C.glBindVertexArray(mesh_vbo)
             -- C.glDrawArrays( GL_TRIANGLES, 0u32, 48 );
@@ -2272,7 +2297,8 @@ function main(): int
 
 
         -- load logo mesh
-        mesh_vbo = create_mesh_from_file( "test" )
+        -- mesh_vbo = create_mesh_from_file( "test" )
+        -- mesh_vbo = create_mesh( "test" )
 
         local alt_text : QuadBatch = create_quad_batch( 1024 )
         qb_begin(alt_text)
