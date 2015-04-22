@@ -139,9 +139,22 @@ extern C
         -- OGL: Textures
         function glGenTextures( n : int, textures : [uint32] )
         function glBindTexture( target : uint32, texture : uint32)
+        function glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : uint32) -- for empty textures
         function glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [byte])
         function glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [float])
         function glTexParameteri( target : uint32, pname : uint32, param : uint32 )
+
+        -- OGL: FBO
+        function glGenRenderbuffers( n : int, renderbuffers : [uint32] )
+        function glBindRenderbuffer( target : uint32, renderbuffer : uint32)
+        function glRenderbufferStorage( target : uint32, internalformat : uint32, width : int, height : int)
+        function glGenFramebuffers( n : int, framebuffers : [uint32] )
+        function glBindFramebuffer( target : uint32, framebuffer : uint32)
+        function glFramebufferRenderbuffer(  target : uint32, attachment : uint32, renderbuffertarget : uint32, renderbuffer : uint32)
+        function glFramebufferTexture( target : uint32, attachment : uint32, texture : uint32, level : int )
+        function glDrawBuffers( n : int, bufs : [uint32] )
+        function glCheckFramebufferStatus( target : uint32 ) : uint32
+
 
     -- FMOD: Core
     -- function FMOD_ErrorString(errcode : uint64) : String
@@ -212,6 +225,13 @@ local GL_TEXTURE_MAG_FILTER : uint32 = 0x2800u32
 local GL_TEXTURE_MIN_FILTER : uint32 = 0x2801u32
 local GL_NEAREST            : uint32 = 0x2600u32
 local GL_LINEAR             : uint32 = 0x2601u32
+
+local GL_FRAMEBUFFER       : uint32 = 0x8D40u32
+local GL_RENDERBUFFER      : uint32 = 0x8D41u32
+local GL_DEPTH_COMPONENT   : uint32 = 0x1902u32
+local GL_DEPTH_ATTACHMENT  : uint32 = 0x8D00u32
+local GL_COLOR_ATTACHMENT0 : uint32 = 0x8CE0u32
+local GL_FRAMEBUFFER_COMPLETE : uint32 = 0x8CD5u32
 
 local SEEK_SET            : int = 0
 local SEEK_CUR            : int = 1
@@ -469,6 +489,74 @@ function create_texture( width : int, height : int, data : [byte] ) : uint32
     check_error("unbound texture", false )
 
     return texture
+end
+
+function create_empty_texture( width : int, height : int ) : uint32
+    local textures : [uint32] = [1:uint32]
+    C.glGenTextures(1, textures )
+    check_error("creating empty texture", true )
+    local texture : uint32 = textures[0]
+
+    C.glBindTexture( GL_TEXTURE_2D, texture )
+    check_error("bind texture", true )
+
+    C.glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST )
+    C.glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST )
+
+    C.glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0u32 )
+    check_error("upload empty texture", true )
+
+    C.glBindTexture( GL_TEXTURE_2D, 0u32 )
+    check_error("unbound texture", true )
+
+    return texture
+end
+
+function create_fbo( width : int, height : int, attach_depth : bool ) : uint32, uint32
+
+    local framebuffers : [uint32] = [1:uint32]
+    C.glGenFramebuffers( 1, framebuffers )
+    check_error("creating fbo", true )
+
+    local fbo : uint32 = framebuffers[0]
+    C.glBindFramebuffer( GL_FRAMEBUFFER, fbo )
+
+    -- gen empty texture
+    local texture = create_empty_texture( width, height )
+
+    local depthbuffers : [uint32] = [1:uint32]
+    C.glGenRenderbuffers( 1, depthbuffers )
+    local depthbuffer : uint32 = depthbuffers[0]
+    check_error("creating depth buffer", true )
+    C.glBindRenderbuffer( GL_RENDERBUFFER, depthbuffer )
+    C.glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height )
+    check_error("binding depth buffer", true )
+    C.glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer )
+    check_error("binding texture", true )
+    C.glFramebufferTexture( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0 );
+
+
+    local fbo_status : uint32 = C.glCheckFramebufferStatus( GL_FRAMEBUFFER )
+    if (fbo_status ~= GL_FRAMEBUFFER_COMPLETE) then
+        log_error("fbo is not complete!")
+    else
+        log_ok("fbo is complete")
+    end
+    C.glBindFramebuffer( GL_FRAMEBUFFER, 0u32 )
+
+    return fbo, texture
+
+end
+
+function render_to_fbo( fbo : uint32 )
+    C.glBindFramebuffer( GL_FRAMEBUFFER, fbo )
+    check_error("binding fbo", false )
+
+    if (fbo ~= 0u32) then
+        local drawbuffers : [uint32] = [GL_COLOR_ATTACHMENT0];
+        C.glDrawBuffers( 1, drawbuffers )
+        check_error("drawing to fbo", false )
+    end
 end
 
 -- function create_mesh_from_file( path : String ) : uint32
@@ -1593,7 +1681,6 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
 	   zzz[1] = ps.particle_buf[i].pos[2]
 	   zzz[2] = ps.particle_buf[i].pos[2]
 	   zzz[3] = ps.particle_buf[i].pos[2]
-	   
 	   qb_add_3d( qb, ps.particle_buf[i].pos[0] - 5f, ps.particle_buf[i].pos[1] - 5f, ps.particle_buf[i].pos[0] + 5.0f, ps.particle_buf[i].pos[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
     end
     qb_end( qb )
@@ -1882,6 +1969,12 @@ end
 function run_floor()
     scene_particle_init()
 
+    local width  : [int] = [1:int]
+    local height : [int] = [1:int]
+    C.glfwGetFramebufferSize( window, width, height )
+    local widthf : float = float(width[0])
+    local heightf : float = float(height[0])
+
     local fb : QuadBatch = create_quad_batch(1024*1024)
 
     local vertex_src : String = read_file_as_string("data/shaders/floor.vp")
@@ -1916,6 +2009,13 @@ function run_floor()
     local tex0_data : [byte] = read_file( "data/textures/consolefont.raw" )
     local tex0 = create_texture(256, 256, tex0_data)
 
+    -- FBO stuff
+    vertex_src  = read_file_as_string("data/shaders/screen.vp")
+    fragment_src  = read_file_as_string("data/shaders/screen.fp")
+    local screen_shader = create_shader( vertex_src, fragment_src )
+    local screen_quad = create_quad()
+--    local screen_fbo, screen_texture = create_fbo(width[0], height[0], true)
+
     local htex = [1:uint32]
     C.glGenTextures(1, htex);
     C.glBindTexture(GL_TEXTURE_2D, htex[0]);
@@ -1940,8 +2040,8 @@ function run_floor()
         local next_switch = 0u64;
 
     while loop_begin() do
-	    local width  : [int] = [1:int]
-		local height : [int] = [1:int]
+
+--        render_to_fbo(screen_fbo )
 
 		local delta = C.glfwGetTime() - last_time_stamp
 		last_time_stamp = C.glfwGetTime()
@@ -1986,9 +2086,7 @@ function run_floor()
 		water_t = to_water * float(delta) + water_t;
 		logo_t = to_logo * float(delta) + logo_t;
 
-		C.glfwGetFramebufferSize( window, width, height )
-		local widthf : float = float(width[0])
-		local heightf : float = float(height[0])
+
 
 		C.glViewport(0,0,width[0],height[0])
 		C.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
@@ -2083,18 +2181,18 @@ function run_floor()
 					test_psys.figure = PARTICLE_FIGURE_CUBE
 				end
 			end
-			
+
 			if (do_switch == 1 and psyk_t > 0.0f and test_psys.mode == PARTICLE_MODE_FOLLOW ) then
 				test_psys.mode = PARTICLE_MODE_EXPLODE
 				test_psys.cool_down = 3.0f
 				test_psys.next_mode = PARTICLE_MODE_FOLLOW
-				
+
 				local i : int = 0
 				local amp = 20.0f
 				for i=0, MAX_PARTICLE_COUNT do
 					local a1 = random() * 3.14f * 2.0f
 					local a2 = random() * 3.14f * 2.0f
-					
+
 					test_psys.particle_buf[i].vel[0] = math.sin(a1) * amp
 					test_psys.particle_buf[i].vel[1] = math.cos(a1) * amp
 					test_psys.particle_buf[i].vel[2] = math.sin(a2) * amp
@@ -2176,7 +2274,7 @@ function run_floor()
 		pandown = pandown * pandown * 500.0f;
 		if (pandown > 1000.0f) then
 		end
-		
+
 		local t1 = 4.0f * t;
 		qb_text_slam(text_qb, 75.0f, 500.0f + pandown, "DEFOLD CREW", 128.0f, 64.0f, t1)
 
@@ -2190,6 +2288,18 @@ function run_floor()
             qb_render(text_qb);
 
             t = t + float(delta);
+
+
+        -- render to backbuffer
+--        render_to_fbo( 0u32 )
+--        C.glUseProgram(screen_shader)
+--        C.glBindTexture(GL_TEXTURE_2D, screen_texture);
+ --       C.glBindVertexArray(screen_quad)
+ --       C.glDrawArrays( GL_TRIANGLES, 0u32, 1*6 );
+        --[[
+
+        ]]
+
         loop_end()
     end
 
