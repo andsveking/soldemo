@@ -1197,7 +1197,7 @@ end
 
 --------------------------------------------------------------
 -- particle meshes????
-local MAX_PARTICLE_COUNT : int = 1024
+local MAX_PARTICLE_COUNT : int = 1024 * 2
 struct Particle
     local pos : @[3:float]
     local vel : @[3:float]
@@ -1212,6 +1212,7 @@ local PARTICLE_MODE_EXPLODE : int = 2
 local PARTICLE_FIGURE_CUBE   : int = 0
 local PARTICLE_FIGURE_SPHERE : int = 1
 local PARTICLE_FIGURE_PLUSBOX : int = 2
+local PARTICLE_FIGURE_PYRAMID : int = 3
 
 struct ParticleSystem
     local mode : int
@@ -1406,6 +1407,81 @@ function gen_logo_particles( x : float, y : float, z : float, w : float, h : flo
 
 end
 ]]
+
+function gen_pyramid_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
+
+    local wh : float = w / 2.0f
+    local hh : float = h / 2.0f
+    local dh : float = d / 2.0f
+
+    -- verts
+    local v0 : [float] = [4:float]
+    local v1 : [float] = [4:float]
+    local v2 : [float] = [4:float]
+    local v3 : [float] = [4:float]
+    local v4 : [float] = [4:float]
+
+    v0[0] = - wh
+    v0[1] = - hh
+    v0[2] =   dh
+    v0[3] = 1.0f
+    v0 = vec_mul(mtx, v0)
+
+    v1[0] =   wh
+    v1[1] = - hh
+    v1[2] =   dh
+    v1[3] = 1.0f
+    v1 = vec_mul(mtx, v1)
+
+    v2[0] =   wh
+    v2[1] = - hh
+    v2[2] = - dh
+    v2[3] = 1.0f
+    v2 = vec_mul(mtx, v2)
+
+    v3[0] = - wh
+    v3[1] = - hh
+    v3[2] = - dh
+    v3[3] = 1.0f
+    v3 = vec_mul(mtx, v3)
+
+    v4[0] = 0.0f
+    v4[1] =   hh
+    v4[2] = 0.0f
+    v4[3] = 1.0f
+    v4 = vec_mul(mtx, v4)
+
+    v0[0] = v0[0] + x
+    v0[1] = v0[1] + y
+    v0[2] = v0[2] + z
+    v1[0] = v1[0] + x
+    v1[1] = v1[1] + y
+    v1[2] = v1[2] + z
+    v2[0] = v2[0] + x
+    v2[1] = v2[1] + y
+    v2[2] = v2[2] + z
+    v3[0] = v3[0] + x
+    v3[1] = v3[1] + y
+    v3[2] = v3[2] + z
+    v4[0] = v4[0] + x
+    v4[1] = v4[1] + y
+    v4[2] = v4[2] + z
+
+    local lines = 8
+    local points_per_line = float(MAX_PARTICLE_COUNT) / float(lines)
+
+    local ppl_i : int = int(points_per_line)
+    gen_points_from_line( v0, v1, ppl_i, ps, ppl_i*0 )
+    gen_points_from_line( v1, v2, ppl_i, ps, ppl_i*1 )
+    gen_points_from_line( v2, v3, ppl_i, ps, ppl_i*2 )
+    gen_points_from_line( v3, v0, ppl_i, ps, ppl_i*3 )
+
+    gen_points_from_line( v0, v4, ppl_i, ps, ppl_i*4 )
+    gen_points_from_line( v1, v4, ppl_i, ps, ppl_i*5 )
+    gen_points_from_line( v2, v4, ppl_i, ps, ppl_i*6 )
+    gen_points_from_line( v3, v4, MAX_PARTICLE_COUNT - ppl_i*7, ps, ppl_i*7 )
+
+end
 
 function gen_cube_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
@@ -2165,9 +2241,11 @@ function run_floor()
 			-- gen_logo_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
 			if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
-			    gen_cube_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
-			elseif ( test_psys.figure == PARTICLE_FIGURE_SPHERE) then
-			    gen_sphere_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+            elseif ( test_psys.figure == PARTICLE_FIGURE_SPHERE) then
+                gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+			elseif ( test_psys.figure == PARTICLE_FIGURE_PYRAMID) then
+			    gen_pyramid_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 			else
 			    gen_plusbox_particles(test_psys, rot_mtx )
 			end
@@ -2175,8 +2253,10 @@ function run_floor()
 			if do_switch == 1 then
 			    if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
 					test_psys.figure = PARTICLE_FIGURE_SPHERE
-				elseif (test_psys.figure == PARTICLE_FIGURE_SPHERE) then
-					test_psys.figure = PARTICLE_FIGURE_PLUSBOX
+                elseif (test_psys.figure == PARTICLE_FIGURE_SPHERE) then
+                    test_psys.figure = PARTICLE_FIGURE_PLUSBOX
+				elseif (test_psys.figure == PARTICLE_FIGURE_PLUSBOX) then
+					test_psys.figure = PARTICLE_FIGURE_PYRAMID
 				else
 					test_psys.figure = PARTICLE_FIGURE_CUBE
 				end
