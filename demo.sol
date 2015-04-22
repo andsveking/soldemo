@@ -737,12 +737,12 @@ end
 
 function qb_write_cube(qb : QuadBatch, x:float, y:float, z:float)
 	local szf = 0.50f
-	qb_write_cube_side(qb, 3*6*(qb.cursor+0), 2*6*(qb.cursor+0), x + 0.0f, y + 0.0f, z - szf, szf, 0.0f, 0.0f, 0.0f, szf, 0.0f, 0f, 0f);
-	qb_write_cube_side(qb, 3*6*(qb.cursor+1), 2*6*(qb.cursor+1), x + 0.0f, y + 0.0f, z + szf,-szf, 0.0f, 0.0f, 0.0f,-szf, 0.0f, 0f, 0f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+0), 2*6*(qb.cursor+0), x + 0.0f, y + 0.0f, z - szf, szf, 0.0f, 0.0f, 0.0f, szf, 0.0f, 1f, 0f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+1), 2*6*(qb.cursor+1), x + 0.0f, y + 0.0f, z + szf,-szf, 0.0f, 0.0f, 0.0f,-szf, 0.0f, 1f, 0f);
 	qb_write_cube_side(qb, 3*6*(qb.cursor+2), 2*6*(qb.cursor+2), x + szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f, szf, 0.0f, szf, 0.0f, 0f, 1f);
 	qb_write_cube_side(qb, 3*6*(qb.cursor+3), 2*6*(qb.cursor+3), x - szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f,-szf, 0.0f, szf, 0.0f, 0f, 1f);
-	qb_write_cube_side(qb, 3*6*(qb.cursor+4), 2*6*(qb.cursor+4), x + 0.0f, y + szf, z + 0.0f, szf, 0.0f, 0.0f, 0.0f, 0.0f, szf, 1f, 0f);
-	qb_write_cube_side(qb, 3*6*(qb.cursor+5), 2*6*(qb.cursor+5), x + 0.0f, y - szf, z + 0.0f,-szf, 0.0f, 0.0f, 0.0f, 0.0f,-szf, 1f, 0f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+4), 2*6*(qb.cursor+4), x + 0.0f, y + szf, z + 0.0f, szf, 0.0f, 0.0f, 0.0f, 0.0f, szf, 0f, 0f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+5), 2*6*(qb.cursor+5), x + 0.0f, y - szf, z + 0.0f,-szf, 0.0f, 0.0f, 0.0f, 0.0f,-szf, 0f, 0f);
 	qb.cursor = qb.cursor + 6;
 end
 
@@ -2152,6 +2152,10 @@ function run_floor()
 
 --        render_to_fbo(screen_fbo )
 
+        C.glfwGetFramebufferSize( window, width, height )
+        widthf = float(width[0])
+        heightf = float(height[0])
+
 		local delta = C.glfwGetTime() - last_time_stamp
 		last_time_stamp = C.glfwGetTime()
 
@@ -2256,7 +2260,7 @@ function run_floor()
         rot_mtx = mtx_mul(dip_mtx, rot_mtx);
 
 
-		local for_logo = mtx_mul(trans_mtx(0f, 1.4f * elevate + 50.0f, 0f), mtx_mul(mtx_rotate_X(ident_mtx(), 0.25f*3.1415f), mtx_rotate_Y(ident_mtx(), 0.25f*3.1415f)));
+		local for_logo = mtx_mul(mtx_mul(trans_mtx(0f, 1.4f * elevate + 50.0f, 0f), mtx_mul(mtx_rotate_X(ident_mtx(), -0.25f*3.1415f), mtx_rotate_Y(ident_mtx(), 0.25f*3.1415f))), mtx_rotate_Z(ident_mtx(), 0.0f));
 		rot_mtx = mtx_interp(rot_mtx, for_logo, to_logo);
 
 		if logo_t > 0.0f then
