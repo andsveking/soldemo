@@ -625,40 +625,63 @@ function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float,
 
 end
 
---[[
-function qb_add_3d_two( qb : QuadBatch, x0 : float, y0 : float, z0 : float, x1 : float, y1 : float, z1 : float, u0 : float, v0 : float, u1 : float, v1 : float)
-
-    local i : int = qb.cursor*3*6
-
-    -- vertices
-    -- tri A: a,b,c
-    qb.vert_buf[i+ 0] = x0
-    qb.vert_buf[i+ 1] = y0
-    qb.vert_buf[i+ 2] = z0
-
-    qb.vert_buf[i+ 3] = x1
-    qb.vert_buf[i+ 4] = y0
-    qb.vert_buf[i+ 5] = z0
-
-    qb.vert_buf[i+ 6] = x1
-    qb.vert_buf[i+ 7] = y1
-    qb.vert_buf[i+ 8] = z1
-
-    -- tri B: a,c,d
-    qb.vert_buf[i+ 9] = x0
-    qb.vert_buf[i+10] = y0
-    qb.vert_buf[i+11] = z0
-
-    qb.vert_buf[i+12] = x1
-    qb.vert_buf[i+13] = y1
-    qb.vert_buf[i+14] = z1
-
-    qb.vert_buf[i+15] = x0
-    qb.vert_buf[i+16] = y1
-    qb.vert_buf[i+17] = z0
-
+function qb_write( qb : QuadBatch, where_pos:int, x : float, y : float, z : float)
+	qb.vert_buf[where_pos + 0] = x
+	qb.vert_buf[where_pos + 1] = y
+	qb.vert_buf[where_pos + 2] = z
 end
-]]--
+
+function qb_write_cube_side(qb : QuadBatch, where_pos:int, where_uv:int, x:float, y:float, z:float, ux:float, uy:float, uz:float, vx:float, vy:float, vz:float, u:float, v:float)
+	qb_write(qb, where_pos + 0, x - ux - vx, y - uy - vy, z - uz - vz);
+	qb_write(qb, where_pos + 3, x + ux - vx, y + uy - vy, z + uz - vz);
+	qb_write(qb, where_pos + 6, x + ux + vx, y + uy + vy, z + uz + vz);
+	qb_write(qb, where_pos + 9, x - ux - vx, y - uy - vy, z - uz - vz);
+	qb_write(qb, where_pos + 12, x + ux + vx, y + uy + vy, z + uz + vz);
+	qb_write(qb, where_pos + 15, x - ux + vx, y - uy + vy, z - uz + vz);
+	for col=0, 6 do
+		qb.uv_buf[where_uv + 2*col + 0] = u
+		qb.uv_buf[where_uv + 2*col + 1] = v
+	end
+end
+
+function qb_write_cube(qb : QuadBatch, x:float, y:float, z:float)
+	local szf = 0.50f
+	qb_write_cube_side(qb, 3*6*(qb.cursor+0), 2*6*(qb.cursor+0), x + 0.0f, y + 0.0f, z - szf, szf, 0.0f, 0.0f, 0.0f, szf, 0.0f, 0f, 0f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+1), 2*6*(qb.cursor+1), x + 0.0f, y + 0.0f, z + szf,-szf, 0.0f, 0.0f, 0.0f,-szf, 0.0f, 0f, 0f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+2), 2*6*(qb.cursor+2), x + szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f, szf, 0.0f, szf, 0.0f, 0f, 1f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+3), 2*6*(qb.cursor+3), x - szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f,-szf, 0.0f, szf, 0.0f, 0f, 1f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+4), 2*6*(qb.cursor+4), x + 0.0f, y + szf, z + 0.0f, szf, 0.0f, 0.0f, 0.0f, 0.0f, szf, 1f, 0f);
+	qb_write_cube_side(qb, 3*6*(qb.cursor+5), 2*6*(qb.cursor+5), x + 0.0f, y - szf, z + 0.0f,-szf, 0.0f, 0.0f, 0.0f, 0.0f,-szf, 1f, 0f);
+	qb.cursor = qb.cursor + 6;
+end
+
+function qb_write_plusbox(qb:QuadBatch, t:float)
+	local s = 50f - 50f*t
+	if t < 0f then
+		return
+	end
+	if s < 0f then
+		s = 0f
+	end
+
+	for x=-1,2 do
+		for y=-1,2 do
+			for z=-1,2 do
+				if (x*x + y*y + z*z) ~= 3 and (x*x+y*y+z*z) ~= 0 then
+                                    for a=0,5 do
+                                    for b=0,5 do
+                                    for c=0,5 do
+											local kx = float(5*x+a)-2f
+											local ky = float(5*y+b)-2f
+											local kz = float(5*z+c)-2f
+                                            qb_write_cube(qb, kx + s*kx, ky + s*ky, kz + s*kz)
+                                    end end end
+				
+				end
+			end
+		end
+	end
+end
 
 function qb_add_3d( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float, z:[float])
 
@@ -851,8 +874,8 @@ function persp_mtx( l : float, r : float, b : float, t : float, n : float, f : f
 
     mtx[8] = 0.0f;
     mtx[9] = 0.0f;
-    mtx[10] = -(f+n)/(f-n);
-    mtx[11] = -2.0f*(f+n)/(f-n);
+    mtx[10] = -(f+n)/(n-f);
+    mtx[11] = -2.0f*f*n/(n-f);
 
     mtx[12] = 0.0f;
     mtx[13] = 0.0f;
@@ -862,27 +885,32 @@ function persp_mtx( l : float, r : float, b : float, t : float, n : float, f : f
 end
 
 
-function ident_mtx() : [float]
+function scale_mtx(x:float, y:float, z:float) : [float]
     local mtx : [float] = [16:float]
-
-    mtx[0] = 1.0f
+    mtx[0] = x
     mtx[1] = 0.0f
     mtx[2] = 0.0f
     mtx[3] = 0.0f
+
     mtx[4] = 0.0f
-    mtx[5] = 1.0f
+    mtx[5] = y
     mtx[6] = 0.0f
     mtx[7] = 0.0f
+
     mtx[8] = 0.0f
     mtx[9] = 0.0f
-    mtx[10] = 1.0f
+    mtx[10] = z
     mtx[11] = 0.0f
+
     mtx[12] = 0.0f
     mtx[13] = 0.0f
     mtx[14] = 0.0f
     mtx[15] = 1.0f
-
     return mtx
+end
+
+function ident_mtx() : [float]
+	return scale_mtx(1.0f, 1.0f, 1.0f)
 end
 
 function trans_mtx(x:float, y:float, z:float) : [float]
@@ -903,6 +931,14 @@ function mtx_mul(a:[float], b:[float]) : [float]
             end
             mtx[4*c + d] = sum
         end
+    end
+    return mtx
+end
+
+function mtx_interp(a:[float], b:[float], t:float) : [float]
+    local mtx : [float] = [16:float]
+	for c=0, 16 do
+		mtx[c] = a[c] * (1f-t) + b[c] * t
     end
     return mtx
 end
@@ -1558,7 +1594,7 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
 	   zzz[2] = ps.particle_buf[i].pos[2]
 	   zzz[3] = ps.particle_buf[i].pos[2]
 	   
-	   qb_add_3d( qb, ps.particle_buf[i].pos[0], ps.particle_buf[i].pos[1], ps.particle_buf[i].pos[0] + 10.0f, ps.particle_buf[i].pos[1] + 10.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
+	   qb_add_3d( qb, ps.particle_buf[i].pos[0] - 5f, ps.particle_buf[i].pos[1] - 5f, ps.particle_buf[i].pos[0] + 5.0f, ps.particle_buf[i].pos[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
     end
     qb_end( qb )
 
@@ -1853,6 +1889,12 @@ function run_floor()
     local floor_shader = create_shader( vertex_src, fragment_src );
     check_error("(floor) create shader", false);
 
+	-- voxel
+    vertex_src  = read_file_as_string("data/shaders/voxel.vp")
+    fragment_src  = read_file_as_string("data/shaders/voxel.fp")
+    local voxel_shader = create_shader( vertex_src, fragment_src )
+	local voxel_qb = create_quad_batch(1024*1024);
+
     --- text
 
     vertex_src  = read_file_as_string("data/shaders/shader.vp")
@@ -1866,6 +1908,7 @@ function run_floor()
     local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx".bytes )
     check_error("(particle) getting locations", false)
     local water_fade:int = C.glGetUniformLocation( floor_shader, "waterFade".bytes );
+    local logo_fade:int = C.glGetUniformLocation( floor_shader, "logoFade".bytes );
     local water_time:int = C.glGetUniformLocation( floor_shader, "waterTime".bytes );
 
     local t:float = 0.0f
@@ -1889,6 +1932,9 @@ function run_floor()
     local to_water:float = 0.0f;
     local water_t:float = 0.0f;
 
+	local to_logo:float = 0.0f;
+	local logo_t:float = 0.0f;
+
 
     local psyk_t:float = 0.0f;
         local next_switch = 0u64;
@@ -1904,12 +1950,22 @@ function run_floor()
 		C.FMOD_Channel_GetPosition(music_channel, tm, 1u64);
 
 		if tm[0].val > 12000u64 then
+--		if tm[0].val > 1000u64 then
 		   to_water = to_water + (1.0f - to_water) * 3.0f * float(delta)
 		   if to_water > 1.0f then
 			  to_water = 1.0f
 		   end
 		end
 
+		if tm[0].val > 42000u64 then
+--		if tm[0].val > 3000u64 then
+		   to_logo = to_logo + (1.0f - to_logo) * 3.0f * float(delta)
+		   if to_logo > 1.0f then
+			  to_logo = 1.0f
+		   end
+		end
+
+--		if tm[0].val > 2000u64 then
 		if tm[0].val > 25500u64 then
 		   if psyk_t == 0.0f then
 			  next_switch = 0u64;
@@ -1928,6 +1984,7 @@ function run_floor()
 		end
 
 		water_t = to_water * float(delta) + water_t;
+		logo_t = to_logo * float(delta) + logo_t;
 
 		C.glfwGetFramebufferSize( window, width, height )
 		local widthf : float = float(width[0])
@@ -1942,9 +1999,16 @@ function run_floor()
 
 		local ortho_mtx = ortho_mtx( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f);
 
-		local fov = 2.0f
-		local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 0.1f, 300.0f)
-		local camera = mtx_mul(persp, trans_mtx(0.0f, -50.0f + math.sin(t*0.2f)*10.0f, -250.0f))
+		local dolly = logo_t * 0.9f
+		if dolly > 1.0f then
+			dolly = 1.0f
+		end
+
+		local fov = 2.0f - 1.8f * dolly
+		local dolly_dist = (2000f-250f) * dolly
+		local elevate = 100.0f * dolly
+		local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 1.0f + dolly_dist, 700.0f + dolly_dist)
+		local camera = mtx_mul(persp, trans_mtx(0.0f, -elevate -50.0f + (1f-to_logo)*math.sin(t*0.2f)*10.0f, -250.0f - dolly_dist))
 
 		C.glUseProgram(floor_shader)
 		C.glUniformMatrix4fv(loc_mtx, 1, true, camera)
@@ -1959,6 +2023,7 @@ function run_floor()
 		C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, 0, 0, 0, GL_RED, GL_FLOAT, texdata);
 		C.glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
 		C.glUniform1f(water_fade, to_water);
+		C.glUniform1f(logo_fade, to_logo);
 		C.glUniform1f(water_time, water_t);
 
 		qb_render(fb)
@@ -1978,17 +2043,33 @@ function run_floor()
         local dip_mtx = trans_mtx(math.sin(psyk_t)*move*200.0f,math.cos(psyk_t*3.0f) * 200.0f - 50.0f,math.cos(psyk_t*0.74f)*move*200.0f);
         rot_mtx = mtx_mul(dip_mtx, rot_mtx);
 
+
+		local for_logo = mtx_mul(trans_mtx(0f, 1.4f * elevate + 50.0f, 0f), mtx_mul(mtx_rotate_X(ident_mtx(), 0.25f*3.1415f), mtx_rotate_Y(ident_mtx(), 0.25f*3.1415f)));
+		rot_mtx = mtx_interp(rot_mtx, for_logo, to_logo);
+
+		if logo_t > 0.0f then
+			test_psys.figure = PARTICLE_FIGURE_PLUSBOX
+			do_switch = 0
+			if logo_t > 1.3f and logo_t < 10.0f then
+				-- final destruction
+				logo_t = 100.0f
+				test_psys.mode = PARTICLE_MODE_FOLLOW
+				do_switch = 1
+				next_switch = 300000000000u64
+			end
+		end
+
 		if water_t > 0.0f then
 
 		    if (test_psys.mode == PARTICLE_MODE_STATIC) then
 			    test_psys.mode = PARTICLE_MODE_FOLLOW;
 			end
-			-- gen_logo_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+			-- gen_logo_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
 			if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
-			    gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+			    gen_cube_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 			elseif ( test_psys.figure == PARTICLE_FIGURE_SPHERE) then
-			    gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+			    gen_sphere_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 			else
 			    gen_plusbox_particles(test_psys, rot_mtx )
 			end
@@ -2020,6 +2101,20 @@ function run_floor()
 				end
 			end
 		end
+
+		if logo_t > 1.0f then
+			test_psys.cool_down = 10000.0f
+		end
+
+		C.glUseProgram(voxel_shader);
+		C.glUniformMatrix4fv(C.glGetUniformLocation(voxel_shader, "mtx".bytes), 1, true, mtx_mul(camera, mtx_mul(rot_mtx, mtx_mul(scale_mtx(0.75f,0.75f,0.75f),scale_mtx(13.3f,13.3f,13.3f)))))
+
+		qb_begin(voxel_qb);
+		qb_write_plusbox(voxel_qb, logo_t - 1.1f);
+		qb_end(voxel_qb);
+		qb_render(voxel_qb);
+
+
 
 		C.glUseProgram(particle_shader)
 		scene_particle_draw(window, camera, 0.1)
