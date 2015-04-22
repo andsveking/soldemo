@@ -747,8 +747,9 @@ function qb_write_cube(qb : QuadBatch, x:float, y:float, z:float)
 end
 
 function qb_write_plusbox(qb:QuadBatch, t:float)
-	local s = 50f - 50f*t
-	if t < 0f then
+	local s = 100f - 100f*t*t
+    --local s = 1.0f - 0.2f * t
+	if t <= 0f then
 		return
 	end
 	if s < 0f then
@@ -767,7 +768,7 @@ function qb_write_plusbox(qb:QuadBatch, t:float)
 											local kz = float(5*z+c)-2f
                                             qb_write_cube(qb, kx + s*kx, ky + s*ky, kz + s*kz)
                                     end end end
-				
+
 				end
 			end
 		end
@@ -2080,6 +2081,11 @@ function run_floor()
 
     local fb : QuadBatch = create_quad_batch(1024*1024)
 
+    -- logo texture
+    local logo_data : [byte] = read_file( "data/textures/defold_logo.raw" )
+    local logo_tex = create_texture(1280, 447, logo_data)
+    local logo_qb = create_quad_batch(12)
+
     local vertex_src : String = read_file_as_string("data/shaders/floor.vp")
     local fragment_src : String = read_file_as_string("data/shaders/floor.fp")
     local floor_shader = create_shader( vertex_src, fragment_src );
@@ -2176,10 +2182,15 @@ function run_floor()
 		   psyk_t = psyk_t + float(delta)
 		end
 
+        if t > 50.0f then
+            break
+        end
+
+
         local do_switch = 0
-        if tm[0].val > next_switch then
+        if tm[0].val > next_switch and math.cos(psyk_t*3.0f) > 0.8f then
 		    if psyk_t > 0.0f then
-			    next_switch = tm[0].val + 10000u64
+			    next_switch = tm[0].val + 6000u64
 			else
 			    next_switch = tm[0].val + 3000u64
 			end
@@ -2233,8 +2244,8 @@ function run_floor()
 
 		-- particles
 		local imtx : [float] = ident_mtx();
-		local rot_mtx : [float] = mtx_rotate_X(imtx, t*1.0f);
-		-- local rot_mtx : [float] = mtx_rotate_Z(rot_mtx, double(t*1.0f))
+		local rot_mtx : [float] = mtx_rotate_X(imtx, t*1.1f);
+		rot_mtx = mtx_rotate_Z(rot_mtx, (t*0.7f))
 
         local move:float = psyk_t;
         if move > 1.0f then
@@ -2270,7 +2281,7 @@ function run_floor()
 			if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
                 gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
             elseif ( test_psys.figure == PARTICLE_FIGURE_SPHERE) then
-                gen_sphere_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                gen_sphere_particles(0.0f, 0.0f, 10.0f, 80.0f, 80.0f, 80.0f, test_psys, rot_mtx )
 			elseif ( test_psys.figure == PARTICLE_FIGURE_PYRAMID) then
 			    gen_pyramid_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 			else
@@ -2317,7 +2328,7 @@ function run_floor()
 		C.glUniformMatrix4fv(C.glGetUniformLocation(voxel_shader, "mtx".bytes), 1, true, mtx_mul(camera, mtx_mul(rot_mtx, mtx_mul(scale_mtx(0.75f,0.75f,0.75f),scale_mtx(13.3f,13.3f,13.3f)))))
 
 		qb_begin(voxel_qb);
-		qb_write_plusbox(voxel_qb, logo_t - 1.1f);
+		qb_write_plusbox(voxel_qb, logo_t - 0.3f);
 		qb_end(voxel_qb);
 		qb_render(voxel_qb);
 
@@ -2408,6 +2419,20 @@ function run_floor()
         --[[
 
         ]]
+
+        -- redner logo
+        if (logo_t > 100.0f) then
+            C.glUseProgram(screen_shader)
+            C.glBindTexture(GL_TEXTURE_2D, logo_tex)
+            location_mtx = C.glGetUniformLocation( screen_shader, "mtx".bytes )
+            C.glUniformMatrix4fv(location_mtx, 1, true, ortho_mtx);
+            local logo_scale = 0.3f
+            qb_begin(logo_qb)
+            qb_add_centered(logo_qb, 400.0f, 100.0f, 1280.0f * logo_scale, 447.0f * logo_scale, 0.0f, 1.0f, 1.0f, 0.0f )
+            qb_end(logo_qb)
+            qb_render(logo_qb)
+        end
+
 
         loop_end()
     end
