@@ -7,6 +7,7 @@ out vec4 fragColor;
 uniform sampler2D tex0;
 uniform float waterFade;
 uniform float waterTime;
+uniform float logoFade;
 
 vec3 hsv2rgb(vec3 c)
 {
@@ -43,5 +44,5 @@ void main() {
 	stdmat = atten * stdmat;
 
 	float spec = pow(dot(normal, vec3(0,0,1)), 5);
-	fragColor = mix(stdmat, mat + vec4(1,1,1,1) * spec * 1, waterFade);
+	fragColor = mix(stdmat, mat + vec4(1,1,1,1) * spec * 1, waterFade) * vec4(1-logoFade) * vec4(1-logoFade);
 }
