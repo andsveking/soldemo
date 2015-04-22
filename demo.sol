@@ -514,6 +514,9 @@ end
 
 function create_fbo( width : int, height : int, attach_depth : bool ) : uint32, uint32
 
+    io.print(width)
+    io.print(height)
+
     local framebuffers : [uint32] = [1:uint32]
     C.glGenFramebuffers( 1, framebuffers )
     check_error("creating fbo", true )
@@ -1204,6 +1207,7 @@ function init_meshy_cube()
         test_psys.particle_buf[i].pos[0] = math.cos(a) * 2048.0f
         test_psys.particle_buf[i].pos[1] = math.sin(a) * 1048.0f + 1100.0f
         test_psys.particle_buf[i].pos[2] = 2000.0f
+        test_psys.particle_buf[i].speed = (random() * 0.6f + 0.4f) * 0.6f
     end
 end
 
@@ -1659,6 +1663,16 @@ function gen_plusbox_particles( ps : ParticleSystem, mtx : [float] )
     end
 end
 
+function fux_particle_speed( ps : ParticleSystem )
+
+    local i : int = 0
+    while (i < MAX_PARTICLE_COUNT) do
+        ps.particle_buf[i].speed = (random() * 0.6f + 0.4f) * 0.6f
+        i = i + 1
+    end
+
+end
+
 function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
 
     if ps.cool_down > 0.0f then
@@ -1677,9 +1691,17 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
         local tv : [float] = [3:float]
         local i : int = 0
         while (i < MAX_PARTICLE_COUNT) do
-            tv[0] = 0.6f*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
-            tv[1] = 0.6f*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
-            tv[2] = 0.6f*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
+            --tv[0] = 0.6f*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
+            --tv[1] = 0.6f*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
+            --tv[2] = 0.6f*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
+            tv[0] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
+            tv[1] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
+            tv[2] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
+
+            if (ps.particle_buf[i].speed < 0.6f) then
+                ps.particle_buf[i].speed = ps.particle_buf[i].speed*1.008f
+                --test_psys.particle_buf[i].speed = (random() * 0.3f + 0.7f) * 0.6f)
+            end
 
             ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + tv[0]
             ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + tv[1]
@@ -1700,6 +1722,11 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
             ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + ps.particle_buf[i].vel[0]
             ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + ps.particle_buf[i].vel[1]
             ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + ps.particle_buf[i].vel[2]
+
+            --if (ps.particle_buf[i].speed < 0.6f) then
+                --ps.particle_buf[i].speed = ps.particle_buf[i].speed*2.0f
+            --ps.particle_buf[i].speed = (random() * 0.3f + 0.7f) * 0.6f
+            --end
 
             i = i + 1
         end
@@ -2175,12 +2202,14 @@ function run_floor()
 			    if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
 					test_psys.figure = PARTICLE_FIGURE_SPHERE
                 elseif (test_psys.figure == PARTICLE_FIGURE_SPHERE) then
-                    test_psys.figure = PARTICLE_FIGURE_PLUSBOX
-				elseif (test_psys.figure == PARTICLE_FIGURE_PLUSBOX) then
+                    --test_psys.figure = PARTICLE_FIGURE_PLUSBOX
+				--elseif (test_psys.figure == PARTICLE_FIGURE_PLUSBOX) then
 					test_psys.figure = PARTICLE_FIGURE_PYRAMID
 				else
 					test_psys.figure = PARTICLE_FIGURE_CUBE
 				end
+
+                fux_particle_speed( test_psys )
 			end
 
 			if (do_switch == 1 and psyk_t > 0.0f and test_psys.mode == PARTICLE_MODE_FOLLOW ) then
@@ -2189,7 +2218,7 @@ function run_floor()
 				test_psys.next_mode = PARTICLE_MODE_FOLLOW
 
 				local i : int = 0
-				local amp = 20.0f
+				local amp = 30.0f
 				for i=0, MAX_PARTICLE_COUNT do
 					local a1 = random() * 3.14f * 2.0f
 					local a2 = random() * 3.14f * 2.0f

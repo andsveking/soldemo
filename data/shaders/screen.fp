@@ -12,7 +12,7 @@ void main() {
     vec2 p = uv0 * 2.0 - 1.0;
     float d = length(p);
 
-#if 1
+#if 0
         // float foobar = float(int(texture( tex0, vec2(0.5, uv0.t) ).b * 30.0)) / 30.0 * 0.5;
         vec4 foobar = texture( tex0, vec2(0.5, float( int(uv0.t*30.0) ) / 30.0 )) * 0.2;
         // p.s += foobar;
@@ -27,7 +27,7 @@ void main() {
     // vec2 goff = vec2(p*0.02);
     // vec2 boff = vec2(p*0.03);
 
-#if 1
+#if 0
     vec2 roff = vec2(p.s*0.01, 0.0);
     vec2 goff = vec2(p.s*0.02, 0.0);
     vec2 boff = vec2(p.s*0.03, 0.0);
