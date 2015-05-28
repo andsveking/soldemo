@@ -80,7 +80,7 @@ end
 extern C
     -- GLFW
     function glfwInit():int
-    function glfwCreateWindow(  width : int, height : int, title:[uint8], monitor : uint64, share : uint64 ) : uint64
+    function glfwCreateWindow(  width : int, height : int, title:String, monitor : uint64, share : uint64 ) : uint64
     function glfwShowWindow( window : uint64 )
     function glfwTerminate()
     function glfwSwapBuffers( window : uint64 )
@@ -101,13 +101,13 @@ extern C
     function glClearColor( red : float, green : float, blue : float, alpha : float )
     function glEnable( cap : uint32 )
     function glDisable( cap : uint32 )
-    function glBlendFunc( sfactor : uint32, dfactor : uint32 )
+		function glBlendFunc( sfactor : uint32, dfactor : uint32 )
 
         -- OGL: Shaders
         function glCreateShader( shaderType : uint32 ) : uint32
         function glCreateProgram() : uint32
         -- !nogc function glShaderSource( shader : uint32, count : uint64, lines : [String], length : [uint32] )
-        function glShaderSource( shader : uint32, count : uint64, lines : [@String], length : uint32 )
+        function glShaderSource( shader : uint32, count : uint64, lines : [String], length : uint32 )
         function glCompileShader( shader : uint32 )
         function glAttachShader( program : uint32, shader : uint32 )
         function glLinkProgram( program : uint32 )
@@ -115,9 +115,9 @@ extern C
         function glIsShader( obj : uint32 ) : bool
         function glGetShaderiv( shader : uint32, pname : uint32, params : [int])
         function glGetProgramiv( shader : uint32, pname : uint32, params : [int])
-        function glGetShaderInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
-        function glGetProgramInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
-        function glGetUniformLocation( program : uint32, name : [byte]) : int
+		function glGetShaderInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
+		function glGetProgramInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
+        function glGetUniformLocation( program : uint32, name : String) : int
         function glUniform4fv( location : int, count : int, value : [float] )
         function glUniform1f( location : int, v0 : float )
         function glUniform1i( location : int, v0 : int )
@@ -126,7 +126,7 @@ extern C
         -- OGL: Geometry
         function glGenBuffers( n : int, buffers : [uint32] )
         function glGenVertexArrays( n : int, buffers : [uint32] )
-        function glBindBuffer( target : uint32, buffer : uint32 )
+        function glBindBuffer( target: uint32, buffer : uint32 )
         function glBindVertexArray( array : uint32 )
         function glBufferData( target : uint32, size : int, data : [float], usage : uint32)
         function glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
@@ -160,12 +160,12 @@ extern C
     -- function FMOD_ErrorString(errcode : uint64) : String
     function FMOD_System_Create(system : [@WrapPointer]) : uint64
     function FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
-    function FMOD_System_CreateSound(system : uint64, path : [byte], mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
+    function FMOD_System_CreateSound(system : uint64, path : String, mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
     function FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
     function FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
-
+		
     -- C Std funcs
-    function fopen( filename : [byte], mode : [byte] ) : uint64
+    function fopen( filename: String, mode: String) : uint64
     function fseek( stream : uint64, offset : int64, whence : int ) : int
     function ftell( stream : uint64 ) : int
     function fclose( stream : uint64 ) : int
@@ -416,35 +416,34 @@ end
 
 function shader_log( obj : uint32 )
     local size:[int] = [200:int]
-    if (C.glIsShader(obj)) then
+    if C.glIsShader(obj) then
         C.glGetShaderiv( obj, GL_INFO_LOG_LENGTH, size )
     else
         C.glGetProgramiv( obj, GL_INFO_LOG_LENGTH, size )
     end
-    if (size[0] == 0) then
+    if size[0] == 0 then
         return
     end
 
     local sub_sizes:[int] = [1:int]
     local data:[byte] = [size[0]:byte]
-    if (C.glIsShader(obj)) then
+    if C.glIsShader(obj) then
         C.glGetShaderInfoLog( obj, size[0], sub_sizes, data)
     else
         C.glGetProgramInfoLog( obj, size[0], sub_sizes, data)
     end
 
-    io.println("Shader log:\n" .. String { bytes = data } )
+    io.println("Shader log:\n" .. string(data) )
 end
 
 function read_file( file_path : String ) : [byte]
-    local f = C.fopen( file_path.bytes, "r".bytes )
+    local f = C.fopen(file_path, "r")
 
     if (f ~= 0u64) then
-
         C.fseek( f, 0i64, SEEK_END )
         local len : int = C.ftell( f ) + 1
         local ret : [byte] = [len:byte]
-        C.fseek( f, 0i64, SEEK_SET)
+        C.fseek(f, 0i64, SEEK_SET)
         -- FIXME make sure we read the whole file...
         C.fread( ret, 1, len, f )
         C.fclose( f );
@@ -464,8 +463,7 @@ function read_file( file_path : String ) : [byte]
 end
 
 function read_file_as_string( file_path : String ) : String
-    local ret : String = String { bytes = read_file( file_path ) }
-    return ret
+    return string(read_file(file_path))
 end
 
 ------------------------------------------------------------------------
@@ -760,15 +758,14 @@ function qb_write_plusbox(qb:QuadBatch, t:float)
 		for y=-1,2 do
 			for z=-1,2 do
 				if (x*x + y*y + z*z) ~= 3 and (x*x+y*y+z*z) ~= 0 then
-                                    for a=0,5 do
-                                    for b=0,5 do
-                                    for c=0,5 do
-											local kx = float(5*x+a)-2f
-											local ky = float(5*y+b)-2f
-											local kz = float(5*z+c)-2f
-                                            qb_write_cube(qb, kx + s*kx, ky + s*ky, kz + s*kz)
-                                    end end end
-
+					for a=0,5 do
+						for b=0,5 do
+							for c=0,5 do
+								local kx = float(5*x+a)-2f
+								local ky = float(5*y+b)-2f
+								local kz = float(5*z+c)-2f
+								qb_write_cube(qb, kx + s*kx, ky + s*ky, kz + s*kz)
+					end end end
 				end
 			end
 		end
@@ -895,7 +892,7 @@ function create_shader( vert_src : String, frag_src : String ) : uint32
     local shader = C.glCreateProgram()
     check_error("create programs", true)
 
-    local a : [@String] = [1:@String]
+    local a : [String] = [1:String]
     a[0] = vert_src
     C.glShaderSource( vert, 1u64, a, 0u32 )
     check_error("shader vert source", true)
@@ -903,7 +900,7 @@ function create_shader( vert_src : String, frag_src : String ) : uint32
     check_error("shader vert compile", true)
     shader_log( vert )
 
-    local a : [@String] = [1:@String]
+    local a : [String] = [1:String]
     a[0] = frag_src
     C.glShaderSource( frag, 1u64, a, 0u32 )
     check_error("shader frag source", true)
@@ -1145,17 +1142,13 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
     local delta = 16.0f / 256.0f
     local i = 0
     local x = start_x
-    while (txt.bytes[i] ~= 0u8) do
-        -- local b : float = i
-        -- io.print(txt.bytes[i])
-
-        local u0 = lut_u[txt.bytes[i]]
-        local v0 = lut_v[txt.bytes[i]]
+    while (txt.byte_at(i) ~= 0u8) do
+        local u0 = lut_u[txt.byte_at(i)]
+        local v0 = lut_v[txt.byte_at(i)]
         local u1 = u0 + delta
         local v1 = v0 + delta
 
         qb_add_centered( qb, x, start_y, char_w, char_w, u0, v1, u1, v0 )
-        -- qb_add( qb, x, start_y, x + char_w, start_y + char_w, u0, v1, u1, v0 )
 
         i = i + 1
         x = x + spacing
@@ -1163,21 +1156,18 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
 
 end
 
-function qb_text_slam( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float, where:float )
+function qb_text_slam( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float, where2:float )
 
     local delta = 16.0f / 256.0f
     local i = 0
     local x = start_x
-    while (txt.bytes[i] ~= 0u8) do
-        -- local b : float = i
-        -- io.print(txt.bytes[i])
-
-        local u0 = lut_u[txt.bytes[i]]
-        local v0 = lut_v[txt.bytes[i]]
+    while (txt.byte_at(i) ~= 0u8) do
+        local u0 = lut_u[txt.byte_at(i)]
+        local v0 = lut_v[txt.byte_at(i)]
         local u1 = u0 + delta
         local v1 = v0 + delta
 
-        local p = where - float(i);
+        local p = where2 - float(i);
         local size = 1.0f
         if (p < -1.0f) then
             size = 0.0f
@@ -1861,7 +1851,7 @@ function scene_particle_init()
 
     particle_shader = create_shader( vertex_src, fragment_src )
     check_error("(particle) create shader", false)
-    particle_loc_mtx = C.glGetUniformLocation( particle_shader, "mtx".bytes )
+    particle_loc_mtx = C.glGetUniformLocation( particle_shader, "mtx")
     check_error("(particle) getting locations", false)
 
     particle_qb = create_quad_batch( particle_amount )
@@ -2107,11 +2097,11 @@ function run_floor()
     local text_shader = create_shader( vertex_src, fragment_src )
     check_error("(particle) create shader", false)
 
-    local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx".bytes )
+    local loc_mtx:int = C.glGetUniformLocation( floor_shader, "mtx")
     check_error("(particle) getting locations", false)
-    local water_fade:int = C.glGetUniformLocation( floor_shader, "waterFade".bytes );
-    local logo_fade:int = C.glGetUniformLocation( floor_shader, "logoFade".bytes );
-    local water_time:int = C.glGetUniformLocation( floor_shader, "waterTime".bytes );
+    local water_fade:int = C.glGetUniformLocation( floor_shader, "waterFade");
+    local logo_fade:int = C.glGetUniformLocation( floor_shader, "logoFade");
+    local water_time:int = C.glGetUniformLocation( floor_shader, "waterTime");
 
     local t:float = 0.0f
 
@@ -2329,7 +2319,7 @@ function run_floor()
 		end
 
 		C.glUseProgram(voxel_shader);
-		C.glUniformMatrix4fv(C.glGetUniformLocation(voxel_shader, "mtx".bytes), 1, true, mtx_mul(camera, mtx_mul(rot_mtx, mtx_mul(scale_mtx(0.75f,0.75f,0.75f),scale_mtx(13.3f,13.3f,13.3f)))))
+		C.glUniformMatrix4fv(C.glGetUniformLocation(voxel_shader, "mtx"), 1, true, mtx_mul(camera, mtx_mul(rot_mtx, mtx_mul(scale_mtx(0.75f,0.75f,0.75f),scale_mtx(13.3f,13.3f,13.3f)))))
 
 		qb_begin(voxel_qb);
 		qb_write_plusbox(voxel_qb, logo_t - 0.3f);
@@ -2365,7 +2355,7 @@ function run_floor()
 		end
 
 		-- C.glUseProgram(mesh_shader)
-		-- local mtxloc = C.glGetUniformLocation( mesh_shader, "mtx".bytes )
+		-- local mtxloc = C.glGetUniformLocation( mesh_shader, "mtx")
 		-- C.glUniformMatrix4fv(mtxloc, 1, true, camera)
 		-- C.glBindVertexArray(mesh_vbo)
 		-- C.glDrawArrays( GL_TRIANGLES, 0u32, 48 );
@@ -2374,10 +2364,10 @@ function run_floor()
 		C.glDisable(GL_DEPTH_TEST);
 
 		local ortho_mtx = ortho_mtx( 0.0f, 800.0f, 0.0f, 600.0f, 0.0f, 1.0f )
-		local location_mtx = C.glGetUniformLocation( text_shader, "mtx".bytes )
-		local location_anim = C.glGetUniformLocation( text_shader, "anim".bytes )
-		local location_offset = C.glGetUniformLocation( text_shader, "offset".bytes )
-		local location_mode = C.glGetUniformLocation( text_shader, "mode".bytes )
+		local location_mtx = C.glGetUniformLocation( text_shader, "mtx")
+		local location_anim = C.glGetUniformLocation( text_shader, "anim")
+		local location_offset = C.glGetUniformLocation( text_shader, "offset")
+		local location_mode = C.glGetUniformLocation( text_shader, "mode")
 		check_error("getting locations", false)
 
 		C.glEnable(GL_BLEND)
@@ -2428,7 +2418,7 @@ function run_floor()
         if (logo_t > 100.0f) then
             C.glUseProgram(screen_shader)
             C.glBindTexture(GL_TEXTURE_2D, logo_tex)
-            location_mtx = C.glGetUniformLocation( screen_shader, "mtx".bytes )
+            location_mtx = C.glGetUniformLocation( screen_shader, "mtx")
             C.glUniformMatrix4fv(location_mtx, 1, true, ortho_mtx);
             local logo_scale = 0.3f
             qb_begin(logo_qb)
@@ -2469,7 +2459,7 @@ function load_sound( fmod_system : uint64, path : String ) : uint64
     local sound_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
     -- local extinfo : [FMOD_CREATESOUNDEXINFO] = [1:FMOD_CREATESOUNDEXINFO]
     -- extinfo[0] =
-    local res : uint64 = C.FMOD_System_CreateSound( fmod_system, path.bytes, 0x40u64, 0u64, sound_ptr_wrap)
+    local res : uint64 = C.FMOD_System_CreateSound( fmod_system, path, 0x40u64, 0u64, sound_ptr_wrap)
 
     if (res ~= FMOD_OK) then
         log_error("(" .. path .. ") could not create sound: ")
@@ -2518,7 +2508,7 @@ function main(): int
     C.glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     C.glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = C.glfwCreateWindow( 800, 600, "sol".bytes, 0u64, 0u64)
+    window = C.glfwCreateWindow( 800, 600, "sol", 0u64, 0u64)
 
     if (window ~= 0u64) then
         C.glfwShowWindow( window )
@@ -2572,14 +2562,14 @@ function main(): int
 		-- run_particle_test()
 		run_floor()
     else
-        io.println "could not create window!"
+		io.println("could not create window!")
     end
 
     -- release scenes
     scene_particle_release()
 
     C.glfwTerminate()
-    io.println "glfw terminated!"
+    io.println("glfw terminated!")
 
     return 0
 end
