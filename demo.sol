@@ -2484,7 +2484,7 @@ local line3: String = "awesome scroller - check it"
 local mesh_vbo : uint32 = 0u32
 
 !main
-function main(): int
+function main(args:[String]): int
 
     create_lut()
 
