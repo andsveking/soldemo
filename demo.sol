@@ -2,8 +2,8 @@ module demo
 
 require io
 require math
-
 require matrix
+require vector
 
 !main
 function main(args:[String]): int
@@ -676,7 +676,6 @@ function qb_begin( qb : QuadBatch )
 end
 
 function qb_end( qb : QuadBatch )
-
     local i : int = qb.cursor*3*6
 
     glBindVertexArray(qb.vao)
@@ -765,7 +764,7 @@ function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float,
 end
 
 
-function qb_write( qb : QuadBatch, where_pos:int, x : float, y : float, z : float)
+function qb_write(qb : QuadBatch, where_pos:int, x : float, y : float, z : float)
     qb.vert_buf[where_pos + 0] = x
     qb.vert_buf[where_pos + 1] = y
     qb.vert_buf[where_pos + 2] = z
@@ -796,9 +795,9 @@ function qb_write_cube(qb : QuadBatch, x:float, y:float, z:float)
     qb.cursor = qb.cursor + 6;
 end
 
+
 function qb_write_plusbox(qb:QuadBatch, t:float)
     local s = 100f - 100f*t*t
-    --local s = 1.0f - 0.2f * t
     if t <= 0f then
         return
     end
@@ -817,14 +816,17 @@ function qb_write_plusbox(qb:QuadBatch, t:float)
                                 local ky = (5*y+b) as float - 2f
                                 local kz = (5*z+c) as float - 2f
                                 qb_write_cube(qb, kx + s*kx, ky + s*ky, kz + s*kz)
-                    end end end
+                            end
+                        end
+                    end
                 end
             end
         end
     end
 end
 
-function qb_add_3d(qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float, z:[float])
+
+function qb_add_3d(qb: QuadBatch, x0: float, y0: float, x1: float, y1: float, u0: float, v0: float, u1: float, v1: float, z: vector.Vector4)
 --   d - c
 --   | / |
 --   a - b
@@ -834,28 +836,28 @@ function qb_add_3d(qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : floa
     -- vertices
     -- tri A: a,b,c
     qb.vert_buf[i+ 1] = y0
-    qb.vert_buf[i+ 2] = z[0]
+    qb.vert_buf[i+ 2] = z.data[0]
     qb.vert_buf[i+ 0] = x0
 
     qb.vert_buf[i+ 4] = y0
-    qb.vert_buf[i+ 5] = z[1]
+    qb.vert_buf[i+ 5] = z.data[1]
     qb.vert_buf[i+ 3] = x1
 
     qb.vert_buf[i+ 7] = y1
-    qb.vert_buf[i+ 8] = z[3]
+    qb.vert_buf[i+ 8] = z.data[3]
     qb.vert_buf[i+ 6] = x1
 
     -- tri B: a,c,d
     qb.vert_buf[i+10] = y0
-    qb.vert_buf[i+11] = z[0]
+    qb.vert_buf[i+11] = z.data[0]
     qb.vert_buf[i+9] = x0
 
     qb.vert_buf[i+13] = y1
-    qb.vert_buf[i+14] = z[3]
+    qb.vert_buf[i+14] = z.data[3]
     qb.vert_buf[i+12] = x1
 
     qb.vert_buf[i+16] = y1
-    qb.vert_buf[i+17] = z[2]
+    qb.vert_buf[i+17] = z.data[2]
     qb.vert_buf[i+15] = x0
 
     i = qb.cursor * 2 * 6
@@ -891,6 +893,7 @@ function qb_add_centered( qb : QuadBatch, x : float, y : float, w : float, h : f
     qb_add( qb, x - wh, y - hh, x + wh, y + hh, u0, v0, u1, v1 )
 
 end
+
 
 function create_quad() : uint32
     local buffers : [uint32] = [1:uint32]
@@ -931,6 +934,7 @@ function create_quad() : uint32
 
     return vao[0]
 end
+
 
 function create_shader( vert_src : String, frag_src : String ) : uint32
     local vert = glCreateShader( GL_VERTEX_SHADER )
@@ -1085,29 +1089,29 @@ function init_meshy_cube()
     end
 end
 
-function gen_points_from_line( v0 : [float], v1 : [float], points_per_line : int, ps : ParticleSystem, fill_start : int )
 
-    local vec  : [float] = [3:float]
-    local step : [float] = [3:float]
-    vec[0] = v1[0] - v0[0]
-    vec[1] = v1[1] - v0[1]
-    vec[2] = v1[2] - v0[2]
-    step[0] = vec[0] / points_per_line as float
-    step[1] = vec[1] / points_per_line as float
-    step[2] = vec[2] / points_per_line as float
+function gen_points_from_line(v0: vector.Vector3, v1: vector.Vector3, points_per_line: int, ps: ParticleSystem, fill_start : int)
+    local vec = vector.vec3()
+    local step = vector.vec3()
+    vec.data[0] = v1.data[0] - v0.data[0]
+    vec.data[1] = v1.data[1] - v0.data[1]
+    vec.data[2] = v1.data[2] - v0.data[2]
+    step.data[0] = vec.data[0] / points_per_line as float
+    step.data[1] = vec.data[1] / points_per_line as float
+    step.data[2] = vec.data[2] / points_per_line as float
 
     local d = 0.0f
     for i=fill_start, fill_start + points_per_line do
-        ps.particle_buf[i].target[0] = v0[0] + step[0] * d
-        ps.particle_buf[i].target[1] = v0[1] + step[1] * d
-        ps.particle_buf[i].target[2] = v0[2] + step[2] * d
+        ps.particle_buf[i].target[0] = v0.data[0] + step.data[0] * d
+        ps.particle_buf[i].target[1] = v0.data[1] + step.data[1] * d
+        ps.particle_buf[i].target[2] = v0.data[2] + step.data[2] * d
 
         d = d + 1.0f
     end
-
 end
 
-function gen_square_points( x : float, y : float, w : float, h : float, ps : ParticleSystem, point_count : int )
+
+function gen_square_points(x : float, y : float, w : float, h : float, ps : ParticleSystem, point_count : int)
     local wh : float = w / 2.0f
     local hh : float = h / 2.0f
 
@@ -1116,29 +1120,17 @@ function gen_square_points( x : float, y : float, w : float, h : float, ps : Par
     local points_per_line = point_count as float / lines as float
 
     -- verts
-    local v0 : [float] = [3:float]
-    local v1 : [float] = [3:float]
-    local v2 : [float] = [3:float]
-    local v3 : [float] = [3:float]
-    v0[0] = x - wh
-    v0[1] = y - hh
-    v0[2] = 0.0f
-    v1[0] = x + wh
-    v1[1] = y - hh
-    v1[2] = 0.0f
-    v2[0] = x + wh
-    v2[1] = y + hh
-    v2[2] = 0.0f
-    v3[0] = x - wh
-    v3[1] = y + hh
-    v3[2] = 0.0f
+    let v0 = vector.vec3(x - wh, y - hh, y - hh)
+    let v1 = vector.vec3(y - hh, y - hh, y - hh)
+    let v2 = vector.vec3(x + wh, y + hh, 0.0f)
+    let v3 = vector.vec3(x - wh, y + hh, 0.0f)
 
     -- vectors
     local ppl_i = points_per_line as int
-    gen_points_from_line( v0, v1, ppl_i, ps, ppl_i*0 )
-    gen_points_from_line( v1, v2, ppl_i, ps, ppl_i*1 )
-    gen_points_from_line( v2, v3, ppl_i, ps, ppl_i*2 )
-    gen_points_from_line( v3, v0, ppl_i, ps, ppl_i*3 )
+    gen_points_from_line(v0, v1, ppl_i, ps, ppl_i*0)
+    gen_points_from_line(v1, v2, ppl_i, ps, ppl_i*1)
+    gen_points_from_line(v2, v3, ppl_i, ps, ppl_i*2)
+    gen_points_from_line(v3, v0, ppl_i, ps, ppl_i*3)
 end
 
 
@@ -1148,70 +1140,26 @@ function gen_pyramid_particles(x: float, y: float, z: float, w: float, h: float,
     local dh : float = d / 2.0f
 
     -- verts
-    local v0 : [float] = [4:float]
-    local v1 : [float] = [4:float]
-    local v2 : [float] = [4:float]
-    local v3 : [float] = [4:float]
-    local v4 : [float] = [4:float]
+    let v0 = matrix.multiply(mtx, vector.vec4(-wh, -hh, dh, 1.0f))
+    let v1 = matrix.multiply(mtx, vector.vec4(wh, -hh, dh, 1.0f))
+    let v2 = matrix.multiply(mtx, vector.vec4(wh, -hh, -dh, 1.0f))
+    let v3 = matrix.multiply(mtx, vector.vec4(-wh, -hh, -dh, 1.0f))
+    let v4 = matrix.multiply(mtx, vector.vec4(0.0f, hh, 0.0f, 1.0f))
 
-    v0[0] = - wh
-    v0[1] = - hh
-    v0[2] =   dh
-    v0[3] = 1.0f
-    v0 = matrix.multiply(mtx, v0)
-
-    v1[0] =   wh
-    v1[1] = - hh
-    v1[2] =   dh
-    v1[3] = 1.0f
-    v1 = matrix.multiply(mtx, v1)
-
-    v2[0] =   wh
-    v2[1] = - hh
-    v2[2] = - dh
-    v2[3] = 1.0f
-    v2 = matrix.multiply(mtx, v2)
-
-    v3[0] = - wh
-    v3[1] = - hh
-    v3[2] = - dh
-    v3[3] = 1.0f
-    v3 = matrix.multiply(mtx, v3)
-
-    v4[0] = 0.0f
-    v4[1] =   hh
-    v4[2] = 0.0f
-    v4[3] = 1.0f
-    v4 = matrix.multiply(mtx, v4)
-
-    v0[0] = v0[0] + x
-    v0[1] = v0[1] + y
-    v0[2] = v0[2] + z
-
-    v1[0] = v1[0] + x
-    v1[1] = v1[1] + y
-    v1[2] = v1[2] + z
-
-    v2[0] = v2[0] + x
-    v2[1] = v2[1] + y
-    v2[2] = v2[2] + z
-
-    v3[0] = v3[0] + x
-    v3[1] = v3[1] + y
-    v3[2] = v3[2] + z
-
-    v4[0] = v4[0] + x
-    v4[1] = v4[1] + y
-    v4[2] = v4[2] + z
+    let v0 = vector.vec3(v0.data[0] + x, v0.data[1] + y, v0.data[2] + z)
+    let v1 = vector.vec3(v1.data[0] + x, v1.data[1] + y, v1.data[2] + z)
+    let v2 = vector.vec3(v2.data[0] + x, v2.data[1] + y, v2.data[2] + z)
+    let v3 = vector.vec3(v3.data[0] + x, v3.data[1] + y, v3.data[2] + z)
+    let v4 = vector.vec3(v4.data[0] + x, v4.data[1] + y, v4.data[2] + z)
 
     local lines = 8
     local points_per_line = MAX_PARTICLE_COUNT as float / lines as float
 
     local ppl_i = points_per_line as int
-    gen_points_from_line( v0, v1, ppl_i, ps, ppl_i*0 )
-    gen_points_from_line( v1, v2, ppl_i, ps, ppl_i*1 )
-    gen_points_from_line( v2, v3, ppl_i, ps, ppl_i*2 )
-    gen_points_from_line( v3, v0, ppl_i, ps, ppl_i*3 )
+    gen_points_from_line(v0, v1, ppl_i, ps, ppl_i*0 )
+    gen_points_from_line(v1, v2, ppl_i, ps, ppl_i*1 )
+    gen_points_from_line(v2, v3, ppl_i, ps, ppl_i*2 )
+    gen_points_from_line(v3, v0, ppl_i, ps, ppl_i*3 )
 
     gen_points_from_line( v0, v4, ppl_i, ps, ppl_i*4 )
     gen_points_from_line( v1, v4, ppl_i, ps, ppl_i*5 )
@@ -1226,94 +1174,23 @@ function gen_cube_particles(x: float, y: float, z: float, w: float, h: float, d:
     local dh : float = d / 2.0f
 
     -- verts
-    local v0 : [float] = [4:float]
-    local v1 : [float] = [4:float]
-    local v2 : [float] = [4:float]
-    local v3 : [float] = [4:float]
-    local v4 : [float] = [4:float]
-    local v5 : [float] = [4:float]
-    local v6 : [float] = [4:float]
-    local v7 : [float] = [4:float]
+    let v0 = matrix.multiply(mtx, vector.vec4(-wh, -hh, dh, 1.0f))
+    let v1 = matrix.multiply(mtx, vector.vec4(wh, -hh, dh, 1.0f))
+    let v2 = matrix.multiply(mtx, vector.vec4(wh, hh, dh, 1.0f))
+    let v3 = matrix.multiply(mtx, vector.vec4(-wh, hh, dh, 1.0f))
+    let v4 = matrix.multiply(mtx, vector.vec4(-wh, -hh, -dh, 1.0f))
+    let v5 = matrix.multiply(mtx, vector.vec4(wh, -hh, -dh, 1.0f))
+    let v6 = matrix.multiply(mtx, vector.vec4(wh, hh, -dh, 1.0f))
+    let v7 = matrix.multiply(mtx, vector.vec4(-wh, hh, -dh, 1.0f));
 
-    v0[0] = - wh
-    v0[1] = - hh
-    v0[2] =   dh
-    v0[3] = 1.0f
-    v0 = matrix.multiply(mtx, v0)
-
-    v1[0] =   wh
-    v1[1] = - hh
-    v1[2] =   dh
-    v1[3] = 1.0f
-    v1 = matrix.multiply(mtx, v1)
-
-    v2[0] =   wh
-    v2[1] =   hh
-    v2[2] =   dh
-    v2[3] = 1.0f
-    v2 = matrix.multiply(mtx, v2)
-
-    v3[0] = - wh
-    v3[1] =   hh
-    v3[2] =   dh
-    v3[3] = 1.0f
-    v3 = matrix.multiply(mtx, v3)
-
-    v4[0] = - wh
-    v4[1] = - hh
-    v4[2] = - dh
-    v4[3] = 1.0f
-    v4 = matrix.multiply(mtx, v4)
-
-    v5[0] =   wh
-    v5[1] = - hh
-    v5[2] = - dh
-    v5[3] = 1.0f
-    v5 = matrix.multiply(mtx, v5)
-
-    v6[0] =   wh
-    v6[1] =   hh
-    v6[2] = - dh
-    v6[3] = 1.0f
-    v6 = matrix.multiply(mtx, v6)
-
-    v7[0] = - wh
-    v7[1] =   hh
-    v7[2] = - dh
-    v7[3] = 1.0f
-    v7 = matrix.multiply(mtx, v7)
-
-    v0[0] = v0[0] + x
-    v0[1] = v0[1] + y
-    v0[2] = v0[2] + z
-
-    v1[0] = v1[0] + x
-    v1[1] = v1[1] + y
-    v1[2] = v1[2] + z
-
-    v2[0] = v2[0] + x
-    v2[1] = v2[1] + y
-    v2[2] = v2[2] + z
-
-    v3[0] = v3[0] + x
-    v3[1] = v3[1] + y
-    v3[2] = v3[2] + z
-
-    v4[0] = v4[0] + x
-    v4[1] = v4[1] + y
-    v4[2] = v4[2] + z
-
-    v5[0] = v5[0] + x
-    v5[1] = v5[1] + y
-    v5[2] = v5[2] + z
-
-    v6[0] = v6[0] + x
-    v6[1] = v6[1] + y
-    v6[2] = v6[2] + z
-
-    v7[0] = v7[0] + x
-    v7[1] = v7[1] + y
-    v7[2] = v7[2] + z
+    let v0 = vector.vec3(v0.data[0] + x, v0.data[1] + y, v0.data[2] + z)
+    let v1 = vector.vec3(v1.data[0] + x, v1.data[1] + y, v1.data[2] + z)
+    let v2 = vector.vec3(v2.data[0] + x, v2.data[1] + y, v2.data[2] + z)
+    let v3 = vector.vec3(v3.data[0] + x, v3.data[1] + y, v3.data[2] + z)
+    let v4 = vector.vec3(v4.data[0] + x, v4.data[1] + y, v4.data[2] + z)
+    let v5 = vector.vec3(v5.data[0] + x, v5.data[1] + y, v5.data[2] + z)
+    let v6 = vector.vec3(v6.data[0] + x, v6.data[1] + y, v6.data[2] + z)
+    let v7 = vector.vec3(v7.data[0] + x, v7.data[1] + y, v7.data[2] + z)
 
     local lines = 12
     local points_per_line = MAX_PARTICLE_COUNT as float / lines as float
@@ -1373,29 +1250,29 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
           for x=0, 4 do
              for y=0, 4 do
                 for q=0, 3 do
-                    local u:[float] = [4:float]
-                    local v:[float] = [4:float]
+                    local u = vector.vec4()
+                    local v = vector.vec4()
                     if a == 0 then
-                        u[0] = x as float
-                        u[1] = y as float
-                        u[2] = q as float
-                        v[0] = x as float
-                        v[1] = y as float
-                        v[2] = (q + 1) as float
+                        u.data[0] = x as float
+                        u.data[1] = y as float
+                        u.data[2] = q as float
+                        v.data[0] = x as float
+                        v.data[1] = y as float
+                        v.data[2] = (q + 1) as float
                     elseif a == 1 then
-                        u[0] = x as float
-                        u[1] = q as float
-                        u[2] = y as float
-                        v[0] = x as float
-                        v[1] = (q + 1) as float
-                        v[2] = y as float
+                        u.data[0] = x as float
+                        u.data[1] = q as float
+                        u.data[2] = y as float
+                        v.data[0] = x as float
+                        v.data[1] = (q + 1) as float
+                        v.data[2] = y as float
                     elseif a == 2 then
-                        u[0] = q as float
-                        u[1] = x as float
-                        u[2] = y as float
-                        v[0] = (q + 1) as float
-                        v[1] = x as float
-                        v[2] = y as float
+                        u.data[0] = q as float
+                        u.data[1] = x as float
+                        u.data[2] = y as float
+                        v.data[0] = (q + 1) as float
+                        v.data[1] = x as float
+                        v.data[2] = y as float
                     end
                     local corn = 0
                     if (x == 0 and y == 0) then
@@ -1412,19 +1289,19 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
                         if p == 0 then
                             lines = lines + 1
                         else
-                            u[3] = 1.0f
-                            v[3] = 1.0f
+                            u.data[3] = 1.0f
+                            v.data[3] = 1.0f
                             local b = 0
                             while b < 3 do
-                                u[b] = (u[b] - 1.5f) * 50.0f
-                                v[b] = (v[b] - 1.5f) * 50.0f
+                                u.data[b] = (u.data[b] - 1.5f) * 50.0f
+                                v.data[b] = (v.data[b] - 1.5f) * 50.0f
                                 b = b + 1
                             end
                             lines = lines - 1
                             if lines == 0 then
-                                gen_points_from_line(matrix.multiply(mtx, u), matrix.multiply(mtx, v), MAX_PARTICLE_COUNT - lp, ps, lp);
+                                gen_points_from_line(matrix.multiply(mtx, u).vec3(), matrix.multiply(mtx, v).vec3(), MAX_PARTICLE_COUNT - lp, ps, lp);
                             else
-                                gen_points_from_line(matrix.multiply(mtx, u), matrix.multiply(mtx, v), per, ps, lp);
+                                gen_points_from_line(matrix.multiply(mtx, u).vec3(), matrix.multiply(mtx, v).vec3(), per, ps, lp);
                             end
                             lp = lp + per
                         end
@@ -1445,7 +1322,7 @@ function fux_particle_speed( ps : ParticleSystem )
 
 end
 
-function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float)
+function update_meshy_cube(ps : ParticleSystem, qb : QuadBatch, delta : float)
     if ps.cool_down > 0.0f then
         ps.cool_down = ps.cool_down - delta
         if (ps.cool_down <= 0.0f) then
@@ -1458,22 +1335,21 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float)
     if (ps.mode == PARTICLE_MODE_STATIC) then
         -- do nothing
     elseif (ps.mode == PARTICLE_MODE_FOLLOW) then
-        local tv : [float] = [3:float]
         local i : int = 0
         while (i < MAX_PARTICLE_COUNT) do
-            tv[0] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
-            tv[1] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
-            tv[2] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
+            let tv_x = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
+            let tv_y = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
+            let tv_z = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
 
             if (ps.particle_buf[i].speed < 0.6f) then
                 ps.particle_buf[i].speed = ps.particle_buf[i].speed*1.008f
             end
 
-            ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + tv[0]
-            ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + tv[1]
-            ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + tv[2]
+            ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + tv_x
+            ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + tv_y
+            ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + tv_z
 
-            i = i + 1
+            i += 1
         end
 
     elseif (ps.mode == PARTICLE_MODE_EXPLODE) then
@@ -1482,31 +1358,23 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float)
 
         local i : int = 0
         while (i < MAX_PARTICLE_COUNT) do
-
             ps.particle_buf[i].vel[1] = ps.particle_buf[i].vel[1] + g * delta
 
             ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + ps.particle_buf[i].vel[0]
             ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + ps.particle_buf[i].vel[1]
             ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + ps.particle_buf[i].vel[2]
-
-            --if (ps.particle_buf[i].speed < 0.6f) then
-                --ps.particle_buf[i].speed = ps.particle_buf[i].speed*2.0f
-            --ps.particle_buf[i].speed = (random() * 0.3f + 0.7f) * 0.6f
-            --end
-
-            i = i + 1
+            i += 1
         end
     end
 
     -- render!!!
-    qb_begin( qb )
-    local zzz : [float] = [4:float]
+    qb_begin(qb)
     for i=0, MAX_PARTICLE_COUNT do
-       zzz[0] = ps.particle_buf[i].pos[2]
-       zzz[1] = ps.particle_buf[i].pos[2]
-       zzz[2] = ps.particle_buf[i].pos[2]
-       zzz[3] = ps.particle_buf[i].pos[2]
-       qb_add_3d(qb, ps.particle_buf[i].pos[0] - 5f, ps.particle_buf[i].pos[1] - 5f, ps.particle_buf[i].pos[0] + 5.0f, ps.particle_buf[i].pos[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
+        let zzz = vector.vec4(ps.particle_buf[i].pos[2],
+                              ps.particle_buf[i].pos[2],
+                              ps.particle_buf[i].pos[2],
+                              ps.particle_buf[i].pos[2])
+        qb_add_3d(qb, ps.particle_buf[i].pos[0] - 5f, ps.particle_buf[i].pos[1] - 5f, ps.particle_buf[i].pos[0] + 5.0f, ps.particle_buf[i].pos[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
     end
     qb_end( qb )
 end
@@ -1537,19 +1405,6 @@ function run_particle_test(  )
 
         local delta = glfwGetTime() - last_time_stamp
         last_time_stamp = glfwGetTime()
-
-        -- if (last_time_stamp > 2.0) then
-        --     io.println("asdads")
-        -- end
-
-        -- scene_particle_draw(window, delta)
-
-        -- qb_render(fb)
-        --     floor_sim(cur, 1 - cur)
-        --     cur = 1 - cur
-
-        --     t = t + 0.01f
-
         loop_end()
     end
 end
@@ -1582,6 +1437,7 @@ function scene_particle_init()
 
     init_meshy_cube()
 end
+
 
 function scene_particle_draw(window : uint64, mtx : matrix.Matrix, delta : float)
     -- TODO fix allocation
@@ -1630,14 +1486,6 @@ function create_mesh( path : String ) : uint32
 
 end
 
---------------------------------------------------------------
---
-function setup()
-    -- create shader
-
-    -- create_quad()
-
-end
 
 function unused_render( window : uint64, delta : double )
     local width  : [int] = [1:int]

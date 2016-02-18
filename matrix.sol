@@ -1,6 +1,8 @@
 module matrix
 
 require math
+require vector
+
 
 struct Matrix
     data: @[16:float]
@@ -200,8 +202,7 @@ fn interp(a: Matrix, b: Matrix, t:float): Matrix
 end
 
 
-
-function multiply(mtx: Matrix, vec:[float]) : [float]
+function multiply(mtx: Matrix, vec:[float]): [float]
     local out = [4:float]
     for k=0, 4 do
         out[k] = mtx.data[4*k+0] * vec[0] + mtx.data[4*k+1] * vec[1] + mtx.data[4*k+2] * vec[2] + mtx.data[4*k+3] * vec[3];
@@ -209,3 +210,23 @@ function multiply(mtx: Matrix, vec:[float]) : [float]
     return out
 end
 
+
+function multiply(mtx: Matrix, vec: vector.Vector3): vector.Vector3
+    local out = vector.Vector3{}
+    for k=0, 3 do
+        out.data[k] =
+            mtx.data[4*k+0] * vec.data[0] +
+            mtx.data[4*k+1] * vec.data[1] +
+            mtx.data[4*k+2] * vec.data[2]
+    end
+    return out
+end
+
+
+function multiply(mtx: Matrix, vec: vector.Vector4): vector.Vector4
+    local out = vector.Vector4{}
+    for k=0, 4 do
+        out.data[k] = mtx.data[4*k+0] * vec.data[0] + mtx.data[4*k+1] * vec.data[1] + mtx.data[4*k+2] * vec.data[2] + mtx.data[4*k+3] * vec.data[3];
+    end
+    return out
+end
