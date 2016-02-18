@@ -1143,72 +1143,6 @@ function gen_square_points( x : float, y : float, w : float, h : float, ps : Par
 end
 
 
-function gen_plus_side( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, start_i : int, mtx: [float] ) : int
-    local wh : float = w / 2.0f
-    local hh : float = h / 2.0f
-    local dh : float = d / 2.0f
-
-    local wh2 : float = wh / 2.0f
-    local hh2 : float = hh / 2.0f
-    local dh2 : float = dh / 2.0f
-
-    -- verts
-    local v0 : [float] = [4:float]
-    local v1 : [float] = [4:float]
-    local v2 : [float] = [4:float]
-    local v3 : [float] = [4:float]
-
-    v0[0] = - wh2
-    v0[1] = - hh
-    v0[2] =   dh
-    v0[3] = 1.0f
-    v0 = vec_mul(mtx, v0)
-
-    v1[0] =   wh2
-    v1[1] = - hh
-    v1[2] =   dh
-    v1[3] = 1.0f
-    v1 = vec_mul(mtx, v1)
-
-    v2[0] =   wh2
-    v2[1] =   hh
-    v2[2] =   dh
-    v2[3] = 1.0f
-    v2 = vec_mul(mtx, v2)
-
-    v3[0] = - wh2
-    v3[1] =   hh
-    v3[2] =   dh
-    v3[3] = 1.0f
-    v3 = vec_mul(mtx, v3)
-
-
-    v0[0] = v0[0] + x
-    v0[1] = v0[1] + y
-    v0[2] = v0[2] + z
-    v1[0] = v1[0] + x
-    v1[1] = v1[1] + y
-    v1[2] = v1[2] + z
-    v2[0] = v2[0] + x
-    v2[1] = v2[1] + y
-    v2[2] = v2[2] + z
-    v3[0] = v3[0] + x
-    v3[1] = v3[1] + y
-    v3[2] = v3[2] + z
-
-
-    local lines = 32
-    local points_per_line = MAX_PARTICLE_COUNT as float / lines as float
-
-    local ppl_i = points_per_line as int
-    gen_points_from_line( v0, v1, ppl_i, ps, ppl_i*0 + start_i*ppl_i)
-    gen_points_from_line( v1, v2, ppl_i, ps, ppl_i*1 + start_i*ppl_i)
-    gen_points_from_line( v2, v3, ppl_i, ps, ppl_i*2 + start_i*ppl_i)
-    gen_points_from_line( v3, v0, ppl_i, ps, ppl_i*3 + start_i*ppl_i)
-
-end
-
-
 function gen_pyramid_particles(x: float, y: float, z: float, w: float, h: float, d: float, ps: ParticleSystem, mtx: matrix.Matrix)
     local wh : float = w / 2.0f
     local hh : float = h / 2.0f
@@ -1964,8 +1898,8 @@ function run_floor()
 
         -- particles
         local imtx = matrix.ident();
-        local rot_mtx = matrix.rotate_X(imtx, t*1.1f);
-        rot_mtx = matrix.rotate_Z(rot_mtx, (t*0.7f))
+        local rot_mtx = imtx.rotate_X(t*1.1f);
+        rot_mtx = rot_mtx.rotate_Z((t*0.7f))
 
         local move:float = psyk_t;
         if move > 1.0f then
@@ -1979,8 +1913,8 @@ function run_floor()
         local for_logo = matrix.multiply(
             matrix.multiply(
                 matrix.trans(0f, 1.4f * elevate + 50.0f, 0f),
-                matrix.multiply(matrix.rotate_X(matrix.ident(), -0.25f*3.1415f), matrix.rotate_Y(matrix.ident(), 0.25f*3.1415f))),
-            matrix.rotate_Z(matrix.ident(), 0.0f));
+                matrix.multiply(matrix.ident().rotate_X(-0.25f*3.1415f), matrix.ident().rotate_Y(0.25f*3.1415f))),
+            matrix.ident().rotate_Z(0.0f));
         rot_mtx = matrix.interp(rot_mtx, for_logo, to_logo);
 
         if logo_t > 0.0f then

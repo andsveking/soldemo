@@ -4,10 +4,81 @@ require math
 
 struct Matrix
     data: @[16:float]
-end
 
-fn create(): Matrix
-    return Matrix{}
+    fn rotate_X(angle: float): Matrix
+        local s = math.sin(angle);
+        local c = math.cos(angle);
+        local R = Matrix{}
+
+        R.data[0] = 1.f;
+        R.data[1] = 0.f;
+        R.data[2] = 0.f;
+        R.data[3] = 0.f;
+        R.data[4] = 0.f;
+        R.data[5] =   c;
+        R.data[6] =   s;
+        R.data[7] = 0.f;
+        R.data[8] = 0.f;
+        R.data[9] =  -s;
+        R.data[10] =   c;
+        R.data[11] = 0.f;
+        R.data[12] = 0.f;
+        R.data[13] = 0.f;
+        R.data[14] = 0.f;
+        R.data[15] = 1.f;
+
+        return multiply(R, self)
+    end
+
+    function rotate_Y(angle: float): Matrix
+        local s = math.sin(angle)
+        local c = math.cos(angle)
+        local R =  Matrix{}
+
+        R.data[0] = c
+        R.data[1] = 0.f
+        R.data[2] = s
+        R.data[3] = 0.f
+        R.data[4] = 0.f
+        R.data[5] = 1.f
+        R.data[6] = 0.f
+        R.data[7] = 0.f
+        R.data[8] = -s
+        R.data[9] = 0.f
+        R.data[10] = c
+        R.data[11] = 0.f
+        R.data[12] = 0.f
+        R.data[13] = 0.f
+        R.data[14] = 0.f
+        R.data[15] = 1.f
+
+        return multiply(R, self)
+    end
+
+    function rotate_Z(angle: float): Matrix
+        local s = math.sin(angle)
+        local c = math.cos(angle)
+        local R = Matrix{}
+
+        R.data[0] = c
+        R.data[1] = s
+        R.data[2] = 0.f
+        R.data[3] = 0.f
+        R.data[4] = -s
+        R.data[5] = c
+        R.data[6] = 0.f
+        R.data[7] = 0.f
+        R.data[8] = 0.f
+        R.data[9] = 0.f
+        R.data[10] = 1.f
+        R.data[11] = 0.f
+        R.data[12] = 0.f
+        R.data[13] = 0.f
+        R.data[14] = 0.f
+        R.data[15] = 1.f
+
+        return multiply(R, self)
+    end
 end
 
 
@@ -105,12 +176,7 @@ function trans(x:float, y:float, z:float): Matrix
 end
 
 
-fn * (a: Matrix, b: Matrix): Matrix
-    return multiply(a, b)
-end
-
-
-function multiply(a: Matrix, b: Matrix): Matrix
+fn multiply(a: Matrix, b: Matrix): Matrix
     local result = Matrix{}
     for c=0, 4 do
         for d=0, 4 do
@@ -124,6 +190,7 @@ function multiply(a: Matrix, b: Matrix): Matrix
     return result
 end
 
+
 fn interp(a: Matrix, b: Matrix, t:float): Matrix
     local mtx = Matrix{}
     for c=0, 16 do
@@ -133,80 +200,6 @@ fn interp(a: Matrix, b: Matrix, t:float): Matrix
 end
 
 
-fn rotate_X(Q: Matrix, angle: float): Matrix
-    local s = math.sin(angle);
-    local c = math.cos(angle);
-    local R = Matrix{}
-
-    R.data[0] = 1.f;
-    R.data[1] = 0.f;
-    R.data[2] = 0.f;
-    R.data[3] = 0.f;
-    R.data[4] = 0.f;
-    R.data[5] =   c;
-    R.data[6] =   s;
-    R.data[7] = 0.f;
-    R.data[8] = 0.f;
-    R.data[9] =  -s;
-    R.data[10] =   c;
-    R.data[11] = 0.f;
-    R.data[12] = 0.f;
-    R.data[13] = 0.f;
-    R.data[14] = 0.f;
-    R.data[15] = 1.f;
-
-    return multiply(R, Q)
-end
-
-function rotate_Y(Q: Matrix, angle: float): Matrix
-    local s = math.sin(angle)
-    local c = math.cos(angle)
-    local R =  Matrix{}
-
-    R.data[0] = c
-    R.data[1] = 0.f
-    R.data[2] = s
-    R.data[3] = 0.f
-    R.data[4] = 0.f
-    R.data[5] = 1.f
-    R.data[6] = 0.f
-    R.data[7] = 0.f
-    R.data[8] = -s
-    R.data[9] = 0.f
-    R.data[10] = c
-    R.data[11] = 0.f
-    R.data[12] = 0.f
-    R.data[13] = 0.f
-    R.data[14] = 0.f
-    R.data[15] = 1.f
-
-    return multiply(R, Q)
-end
-
-function rotate_Z(Q: Matrix, angle: float): Matrix
-    local s = math.sin(angle)
-    local c = math.cos(angle)
-    local R = Matrix{}
-
-    R.data[0] = c
-    R.data[1] = s
-    R.data[2] = 0.f
-    R.data[3] = 0.f
-    R.data[4] = -s
-    R.data[5] = c
-    R.data[6] = 0.f
-    R.data[7] = 0.f
-    R.data[8] = 0.f
-    R.data[9] = 0.f
-    R.data[10] = 1.f
-    R.data[11] = 0.f
-    R.data[12] = 0.f
-    R.data[13] = 0.f
-    R.data[14] = 0.f
-    R.data[15] = 1.f
-
-    return multiply(R, Q)
-end
 
 function multiply(mtx: Matrix, vec:[float]) : [float]
     local out = [4:float]
