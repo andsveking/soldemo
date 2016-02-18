@@ -138,99 +138,98 @@ end
 -- External APIs
 
 -- GLFW
-extern glfwInit():int
-extern glfwCreateWindow(  width : int, height : int, title:String, monitor : uint64, share : uint64 ) : uint64
-extern glfwShowWindow( window : uint64 )
-extern glfwTerminate()
-extern glfwSwapBuffers( window : uint64 )
-extern glfwPollEvents()
-extern glfwWindowShouldClose( window : uint64 ) : int
-extern glfwSetWindowShouldClose( window : uint64, int )
-extern glfwWindowHint( target : uint32, hint : uint32 )
+!nogc extern glfwInit():int
+!nogc extern glfwCreateWindow(  width : int, height : int, title:String, monitor : uint64, share : uint64 ) : uint64
+!nogc extern glfwShowWindow( window : uint64 )
+!nogc extern glfwTerminate()
+!nogc extern glfwSwapBuffers( window : uint64 )
+!nogc extern glfwPollEvents()
+!nogc extern glfwWindowShouldClose( window : uint64 ) : int
+!nogc extern glfwSetWindowShouldClose( window : uint64, int )
+!nogc extern glfwWindowHint( target : uint32, hint : uint32 )
 
-extern glfwGetMouseButton(window : uint64, button : int ) : int
-extern glfwGetFramebufferSize(window : uint64, width : [int], height : [int] )
-extern glfwGetWindowSize(window : uint64, width : [int], height : [int] )
-extern glfwGetTime() : double
+!nogc extern glfwGetMouseButton(window : uint64, button : int ) : int
+!nogc extern glfwGetFramebufferSize(window : uint64, width : [int], height : [int] )
+!nogc extern glfwGetWindowSize(window : uint64, width : [int], height : [int] )
+!nogc extern glfwGetTime() : double
 
 -- OpenGL
-extern glGetError() : uint32
-extern glViewport( x : int, y : int, width : int, height : int )
-extern glClear( mask : uint32 )
-extern glClearColor( red : float, green : float, blue : float, alpha : float )
-extern glEnable( cap : uint32 )
-extern glDisable( cap : uint32 )
-extern glBlendFunc( sfactor : uint32, dfactor : uint32 )
+!nogc extern glGetError() : uint32
+!nogc extern glViewport( x : int, y : int, width : int, height : int )
+!nogc extern glClear( mask : uint32 )
+!nogc extern glClearColor( red : float, green : float, blue : float, alpha : float )
+!nogc extern glEnable( cap : uint32 )
+!nogc extern glDisable( cap : uint32 )
+!nogc extern glBlendFunc( sfactor : uint32, dfactor : uint32 )
 
 -- OGL: Shaders
-extern glCreateShader( shaderType : uint32 ) : uint32
-extern glCreateProgram() : uint32
--- !nogc extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : [uint32] )
-extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : uint32 )
-extern glCompileShader( shader : uint32 )
-extern glAttachShader( program : uint32, shader : uint32 )
-extern glLinkProgram( program : uint32 )
-extern glUseProgram( program : uint32 )
-extern glIsShader( obj : uint32 ) : bool
-extern glGetShaderiv( shader : uint32, pname : uint32, params : [int])
-extern glGetProgramiv( shader : uint32, pname : uint32, params : [int])
-extern glGetShaderInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
-extern glGetProgramInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
-extern glGetUniformLocation( program : uint32, name : String) : int
-extern glUniform4fv( location : int, count : int, value : [float] )
-extern glUniform1f( location : int, v0 : float )
-extern glUniform1i( location : int, v0 : int )
-extern glUniformMatrix4fv( location : int, count : int, transpose : bool, value: matrix.Matrix)
+!nogc extern glCreateShader( shaderType : uint32 ) : uint32
+!nogc extern glCreateProgram() : uint32
+-- !nogc !nogc extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : [uint32] )
+!nogc extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : uint32 )
+!nogc extern glCompileShader( shader : uint32 )
+!nogc extern glAttachShader( program : uint32, shader : uint32 )
+!nogc extern glLinkProgram( program : uint32 )
+!nogc extern glUseProgram( program : uint32 )
+!nogc extern glIsShader( obj : uint32 ) : bool
+!nogc extern glGetShaderiv( shader : uint32, pname : uint32, params : [int])
+!nogc extern glGetProgramiv( shader : uint32, pname : uint32, params : [int])
+!nogc extern glGetShaderInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
+!nogc extern glGetProgramInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
+!nogc extern glGetUniformLocation( program : uint32, name : String) : int
+!nogc extern glUniform4fv( location : int, count : int, value : [float] )
+!nogc extern glUniform1f( location : int, v0 : float )
+!nogc extern glUniform1i( location : int, v0 : int )
+!nogc extern glUniformMatrix4fv( location : int, count : int, transpose : bool, value: matrix.Matrix)
 
 -- OGL: Geometry
-extern glGenBuffers( n : int, buffers : [uint32] )
-extern glGenVertexArrays( n : int, buffers : [uint32] )
-extern glBindBuffer( target: uint32, buffer : uint32 )
-extern glBindVertexArray( array : uint32 )
-extern glBufferData( target : uint32, size : int, data : [float], usage : uint32)
-extern glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
--- extern glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
-extern glDrawArrays( mode : uint32, first : uint32, count : int )
-extern glEnableVertexAttribArray( index : int )
-extern glDisableVertexAttribArray( index : int )
-extern glVertexAttribPointer( index : uint32, size : int, type : uint32, normalized : bool, stride : int, pointer : int )
+!nogc extern glGenBuffers( n : int, buffers : [uint32] )
+!nogc extern glGenVertexArrays( n : int, buffers : [uint32] )
+!nogc extern glBindBuffer( target: uint32, buffer : uint32 )
+!nogc extern glBindVertexArray( array : uint32 )
+!nogc extern glBufferData( target : uint32, size : int, data : [float], usage : uint32)
+!nogc extern glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
+-- !nogc extern glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
+!nogc extern glDrawArrays( mode : uint32, first : uint32, count : int )
+!nogc extern glEnableVertexAttribArray( index : int )
+!nogc extern glDisableVertexAttribArray( index : int )
+!nogc extern glVertexAttribPointer( index : uint32, size : int, type : uint32, normalized : bool, stride : int, pointer : int )
 
 -- OGL: Textures
-extern glGenTextures( n : int, textures : [uint32] )
-extern glBindTexture( target : uint32, texture : uint32)
-extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : uint32) -- for empty textures
-extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [byte])
-extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [float])
-extern glTexParameteri( target : uint32, pname : uint32, param : uint32 )
+!nogc extern glGenTextures( n : int, textures : [uint32] )
+!nogc extern glBindTexture( target : uint32, texture : uint32)
+!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : uint32) -- for empty textures
+!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [byte])
+!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [float])
+!nogc extern glTexParameteri( target : uint32, pname : uint32, param : uint32 )
 
 -- OGL: FBO
-extern glGenRenderbuffers( n : int, renderbuffers : [uint32] )
-extern glBindRenderbuffer( target : uint32, renderbuffer : uint32)
-extern glRenderbufferStorage( target : uint32, internalformat : uint32, width : int, height : int)
-extern glGenFramebuffers( n : int, framebuffers : [uint32] )
-extern glBindFramebuffer( target : uint32, framebuffer : uint32)
-extern glFramebufferRenderbuffer(  target : uint32, attachment : uint32, renderbuffertarget : uint32, renderbuffer : uint32)
-extern glFramebufferTexture( target : uint32, attachment : uint32, texture : uint32, level : int )
-extern glDrawBuffers( n : int, bufs : [uint32] )
-extern glCheckFramebufferStatus( target : uint32 ) : uint32
+!nogc extern glGenRenderbuffers( n : int, renderbuffers : [uint32] )
+!nogc extern glBindRenderbuffer( target : uint32, renderbuffer : uint32)
+!nogc extern glRenderbufferStorage( target : uint32, internalformat : uint32, width : int, height : int)
+!nogc extern glGenFramebuffers( n : int, framebuffers : [uint32] )
+!nogc extern glBindFramebuffer( target : uint32, framebuffer : uint32)
+!nogc extern glFramebufferRenderbuffer(  target : uint32, attachment : uint32, renderbuffertarget : uint32, renderbuffer : uint32)
+!nogc extern glFramebufferTexture( target : uint32, attachment : uint32, texture : uint32, level : int )
+!nogc extern glDrawBuffers( n : int, bufs : [uint32] )
+!nogc extern glCheckFramebufferStatus( target : uint32 ) : uint32
 
 
 -- FMOD: Core
--- function FMOD_ErrorString(errcode : uint64) : String
-extern FMOD_System_Create(system : [@WrapPointer]) : uint64
-extern FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
-extern FMOD_System_CreateSound(system : uint64, path : String, mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
-extern FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
-extern FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
+!nogc extern FMOD_System_Create(system : [@WrapPointer]) : uint64
+!nogc extern FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
+!nogc extern FMOD_System_CreateSound(system : uint64, path : String, mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
+!nogc extern FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
+!nogc extern FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
 
 -- C Std funcs
-extern fopen( filename: String, mode: String) : uint64
-extern fseek( stream : uint64, offset : int64, whence : int ) : int
-extern ftell( stream : uint64 ) : int
-extern fclose( stream : uint64 ) : int
-extern fread( ptr : [byte], size : int, count : int, stream : uint64) : int64
-extern chdir(path : String) : int
-extern rand() : int
+!nogc extern fopen( filename: String, mode: String) : uint64
+!nogc extern fseek( stream : uint64, offset : int64, whence : int ) : int
+!nogc extern ftell( stream : uint64 ) : int
+!nogc extern fclose( stream : uint64 ) : int
+!nogc extern fread( ptr : [byte], size : int, count : int, stream : uint64) : int64
+!nogc extern chdir(path : String) : int
+!nogc extern rand() : int
 
 
 -----------------------------------------------------------------------
@@ -1438,7 +1437,6 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
 end
 
 function fux_particle_speed( ps : ParticleSystem )
-
     local i : int = 0
     while (i < MAX_PARTICLE_COUNT) do
         ps.particle_buf[i].speed = (random() * 0.6f + 0.4f) * 0.6f
@@ -1447,13 +1445,11 @@ function fux_particle_speed( ps : ParticleSystem )
 
 end
 
-function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
-
+function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float)
     if ps.cool_down > 0.0f then
         ps.cool_down = ps.cool_down - delta
         if (ps.cool_down <= 0.0f) then
             ps.cool_down = 0.0f
-
             ps.mode = ps.next_mode
         end
     end
@@ -1465,16 +1461,12 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
         local tv : [float] = [3:float]
         local i : int = 0
         while (i < MAX_PARTICLE_COUNT) do
-            --tv[0] = 0.6f*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
-            --tv[1] = 0.6f*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
-            --tv[2] = 0.6f*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
             tv[0] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
             tv[1] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
             tv[2] = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
 
             if (ps.particle_buf[i].speed < 0.6f) then
                 ps.particle_buf[i].speed = ps.particle_buf[i].speed*1.008f
-                --test_psys.particle_buf[i].speed = (random() * 0.3f + 0.7f) * 0.6f)
             end
 
             ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + tv[0]
@@ -1509,23 +1501,14 @@ function update_meshy_cube( ps : ParticleSystem, qb : QuadBatch, delta : float )
     -- render!!!
     qb_begin( qb )
     local zzz : [float] = [4:float]
-    -- zzz[0] = 0.0f
-    -- zzz[1] = 0.0f
-    -- zzz[2] = 0.0f
     for i=0, MAX_PARTICLE_COUNT do
-       -- qb_add_centered( qb,
-       -- ps.particle_buf[i].pos[0],
-       -- ps.particle_buf[i].pos[1],
-       -- 8.0f, 8.0f,
-       -- 0.0f, 0.0f, 1.0f, 1.0f )
        zzz[0] = ps.particle_buf[i].pos[2]
        zzz[1] = ps.particle_buf[i].pos[2]
        zzz[2] = ps.particle_buf[i].pos[2]
        zzz[3] = ps.particle_buf[i].pos[2]
-       qb_add_3d( qb, ps.particle_buf[i].pos[0] - 5f, ps.particle_buf[i].pos[1] - 5f, ps.particle_buf[i].pos[0] + 5.0f, ps.particle_buf[i].pos[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
+       qb_add_3d(qb, ps.particle_buf[i].pos[0] - 5f, ps.particle_buf[i].pos[1] - 5f, ps.particle_buf[i].pos[0] + 5.0f, ps.particle_buf[i].pos[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
     end
     qb_end( qb )
-
 end
 
 
@@ -1668,13 +1651,6 @@ function unused_render( window : uint64, delta : double )
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable( GL_DEPTH_TEST )
     glDisable( GL_CULL_FACE )
-
-
-
-
---    scene_particle_draw( window, delta )
-
-
 end
 
 function loop_begin():bool
@@ -1682,8 +1658,8 @@ function loop_begin():bool
 end
 
 function loop_end()
-        glfwSwapBuffers(window)
-        glfwPollEvents()
+    glfwSwapBuffers(window)
+    glfwPollEvents()
 end
 
 local floorsize:int = 256
@@ -1709,7 +1685,7 @@ function gen_floor(qb:QuadBatch, gridsize:int)
 end
 
 
-function floor_sim(src:int, dst:int)
+function floor_sim(src: int, dst: int)
     local c2 = 30.0f
 
     local s = floordata[src].heights
@@ -1728,12 +1704,13 @@ function floor_sim(src:int, dst:int)
     end
 end
 
+
 function run_floor()
     scene_particle_init()
 
     local width = [1:int]
     local height = [1:int]
-    glfwGetFramebufferSize( window, width, height )
+    glfwGetFramebufferSize(window, width, height)
     local widthf = width[0] as float
     local heightf = height[0] as float
 
@@ -1746,7 +1723,7 @@ function run_floor()
 
     local vertex_src : String = read_file_as_string("data/shaders/floor.vp")
     local fragment_src : String = read_file_as_string("data/shaders/floor.fp")
-    local floor_shader = create_shader( vertex_src, fragment_src );
+    local floor_shader = create_shader(vertex_src, fragment_src);
     check_error("(floor) create shader", false);
 
     -- voxel
@@ -1756,7 +1733,6 @@ function run_floor()
     local voxel_qb = create_quad_batch(1024*1024);
 
     --- text
-
     vertex_src  = read_file_as_string("data/shaders/shader.vp")
     fragment_src  = read_file_as_string("data/shaders/shader.fp")
     local text_shader = create_shader( vertex_src, fragment_src )
@@ -1773,7 +1749,7 @@ function run_floor()
 
     local t:float = 0.0f
 
-    local tex0_data : [byte] = read_file( "data/textures/consolefont.raw" )
+    local tex0_data : [byte] = read_file( "data/textures/consolefont.raw")
     local tex0 = create_texture(256, 256, tex0_data)
 
     -- FBO stuff
@@ -1781,7 +1757,6 @@ function run_floor()
     fragment_src  = read_file_as_string("data/shaders/screen.fp")
     local screen_shader = create_shader( vertex_src, fragment_src )
     local screen_quad = create_quad()
---    local screen_fbo, screen_texture = create_fbo(width[0], height[0], true)
 
     local htex = [1:uint32]
     glGenTextures(1, htex);
@@ -1806,8 +1781,10 @@ function run_floor()
     local psyk_t:float = 0.0f;
     local next_switch = 0u64;
 
+    local texdata: [float] = [65536:float]
+
     while loop_begin() do
-        glfwGetFramebufferSize( window, width, height )
+        glfwGetFramebufferSize(window, width, height)
         widthf = width[0] as float
         heightf = height[0] as float
 
@@ -1842,7 +1819,6 @@ function run_floor()
             break
         end
 
-
         local do_switch = 0
         if tm[0].val > next_switch and math.cos(psyk_t*3.0f) > 0.8f then
             if psyk_t > 0.0f then
@@ -1856,14 +1832,12 @@ function run_floor()
         water_t = to_water * delta + water_t;
         logo_t = to_logo * delta + logo_t;
 
-
-
-        glViewport(0,0,width[0],height[0])
+        glViewport(0, 0, width[0], height[0])
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
-        glClear( 0x4100u32 )
-        glDisable( GL_BLEND )
-        glEnable( GL_DEPTH_TEST )
-        glDisable( GL_CULL_FACE)
+        glClear(0x4100u32)
+        glDisable(GL_BLEND)
+        glEnable(GL_DEPTH_TEST)
+        glDisable(GL_CULL_FACE)
 
         local dolly = logo_t * 0.9f
         if dolly > 1.0f then
@@ -1873,21 +1847,20 @@ function run_floor()
         local fov = 2.0f - 1.8f * dolly
         local dolly_dist = (2000f-250f) * dolly
         local elevate = 100.0f * dolly
-        local persp: matrix.Matrix = matrix.persp(-0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 1.0f + dolly_dist, 700.0f + dolly_dist)
-        local camera: matrix.Matrix = matrix.multiply(persp, matrix.trans(0.0f, -elevate -50.0f + (1f-to_logo)*math.sin(t*0.2f)*10.0f, -250.0f - dolly_dist))
+        local persp = matrix.persp(-0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 1.0f + dolly_dist, 700.0f + dolly_dist)
+        local camera = matrix.multiply(persp, matrix.trans(0.0f, -elevate -50.0f + (1f-to_logo)*math.sin(t*0.2f)*10.0f, -250.0f - dolly_dist))
 
         glUseProgram(floor_shader)
         glUniformMatrix4fv(loc_mtx, 1, true, camera)
 
         -- convert & scale heights
-        local texdata : [float] = [65536:float]
         for k=0, 65536 do
            texdata[k] = 0.001f * floordata[cur].heights[k]
         end
 
         glBindTexture(GL_TEXTURE_2D, htex[0]);
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, 0, 0, 0, GL_RED, GL_FLOAT, texdata);
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 0, 0, 0, GL_RED, GL_FLOAT, texdata);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
         glUniform1f(water_fade, to_water);
         glUniform1f(logo_fade, to_logo);
         glUniform1f(water_time, water_t);
@@ -1901,14 +1874,13 @@ function run_floor()
         local rot_mtx = imtx.rotate_X(t*1.1f);
         rot_mtx = rot_mtx.rotate_Z((t*0.7f))
 
-        local move:float = psyk_t;
+        local move = psyk_t;
         if move > 1.0f then
            move = 1.0f;
         end
 
-        local dip_mtx = matrix.trans(math.sin(psyk_t)*move*200.0f,math.cos(psyk_t*3.0f) * 200.0f - 50.0f,math.cos(psyk_t*0.74f)*move*200.0f);
+        local dip_mtx = matrix.trans(math.sin(psyk_t) * move * 200.0f, math.cos(psyk_t*3.0f) * 200.0f - 50.0f, math.cos(psyk_t*0.74f) * move * 200.0f);
         rot_mtx = matrix.multiply(dip_mtx, rot_mtx);
-
 
         local for_logo = matrix.multiply(
             matrix.multiply(
@@ -2005,7 +1977,6 @@ function run_floor()
         local px:int = (math.sin(2.0f*t)*64.0f) as int + 128;
         local py:int = (math.cos(3.0f*t)*64.0f) as int + 128;
 
-
         for p=0, MAX_PARTICLE_COUNT do
             local pos:[3:float] = test_psys.particle_buf[p].pos;
             if (pos[1] < 0.0f) and (pos[1] > -5.0f) then
@@ -2064,7 +2035,7 @@ function run_floor()
 
         t = t + delta
 
-        -- redner logo
+        -- render logo
         if (logo_t > 100.0f) then
             glUseProgram(screen_shader)
             glBindTexture(GL_TEXTURE_2D, logo_tex)
@@ -2076,7 +2047,6 @@ function run_floor()
             qb_end(logo_qb)
             qb_render(logo_qb)
         end
-
 
         loop_end()
     end
@@ -2104,10 +2074,7 @@ end
 
 
 function load_sound( fmod_system : uint64, path : String ) : uint64
-
     local sound_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
-    -- local extinfo : [FMOD_CREATESOUNDEXINFO] = [1:FMOD_CREATESOUNDEXINFO]
-    -- extinfo[0] =
     local res : uint64 = FMOD_System_CreateSound( fmod_system, path, 0x40u64, 0u64, sound_ptr_wrap)
 
     if (res ~= FMOD_OK) then
@@ -2122,12 +2089,12 @@ function load_sound( fmod_system : uint64, path : String ) : uint64
     return sound_ptr
 end
 
-function play_sound( fmod_system : uint64, fmod_sound : uint64 ) : uint64
+function play_sound(fmod_system : uint64, fmod_sound : uint64) : uint64
     local channel_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
     local res : uint64 = FMOD_System_PlaySound( fmod_system, -1, fmod_sound, false, channel_ptr_wrap)
     if (res ~= FMOD_OK) then
         log_error("could not play sound: ")
---        io.println(res)
+        --        io.println(res)
         -- log_error("(" .. path .. ") could not create sound: " .. FMOD_ErrorString(res))
     end
     return channel_ptr_wrap[0].ptr;
