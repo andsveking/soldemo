@@ -3,18 +3,79 @@ module demo
 require io
 require math
 
+require matrix
+
+!main
+function main(args:[String]): int
+    create_lut()
+
+    -- chdir("/Users/svenandersson/Documents/development/demo/")
+
+    if (glfwInit() == 0) then
+        return -1
+    end
+
+    -- get a ogl >= 3.2 context on OSX
+    -- lets us use layout(location = x)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3u32);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2u32);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    window = glfwCreateWindow( 800, 600, "sol", 0u64, 0u64)
+
+    if (window ~= 0u64) then
+        glfwShowWindow( window )
+
+        -- init audio and load sound
+        local sound_system = init_audio()
+        local drum_sound = load_sound( sound_system, "data/music/skadad.mp3" )
+        music_channel = play_sound( sound_system, drum_sound )
+
+        local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
+        -- io.println("vertex_src: " .. vertex_src)
+        local fragment_src : String = read_file_as_string("data/shaders/shader.fp")
+        -- io.println("fragment_src: " .. fragment_src)
+
+        local shader = create_shader( vertex_src, fragment_src )
+        local quad = create_quad()
+        local qb : QuadBatch = create_quad_batch( 1024 )
+        qb_begin(qb)
+        qb_text(qb, 0.0f, 220.0f, line1, 16.0f, 12.0f)
+        qb_text(qb, 100.0f, 160.0f, line2, 32.0f, 24.0f)
+        qb_text(qb, 0.0f, 80.0f, line1, 16.0f, 12.0f)
+        qb_end( qb )
+
+        local alt_text : QuadBatch = create_quad_batch( 1024 )
+        qb_begin(alt_text)
+        qb_text(alt_text, 160.0f-16.0f*5.5f , 5.0f, "DEFOLD CREW", 32.0f, 16.0f)
+        qb_end(alt_text)
+
+        -- setup()
+        local tex0_data : [byte] = read_file( "data/textures/consolefont.raw" )
+        local tex0 = create_texture(256, 256, tex0_data)
+
+        local anim = 0.0f
+        local last_time_stamp = glfwGetTime()
+
+        -- init scenes
+        -- scene_particle_init()
+        -- run_particle_test()
+        run_floor()
+    else
+        io.println("could not create window!")
+    end
+
+    -- release scenes
+    glfwTerminate()
+    io.println("glfw terminated!")
+
+    return 0
+end
+
+
 ------------------------------------------------------------------
 -- Structs
-value struct StringArray
-   local arr: [byte]
-end
--- typedef StringArray [byte]
-
--- value struct FloatArray
---     local data : [float]
---     local capacity : int
---     local size : int
--- end
 
 struct WrapPointer
     local ptr : uint64
@@ -119,7 +180,7 @@ extern glGetUniformLocation( program : uint32, name : String) : int
 extern glUniform4fv( location : int, count : int, value : [float] )
 extern glUniform1f( location : int, v0 : float )
 extern glUniform1i( location : int, v0 : int )
-extern glUniformMatrix4fv( location : int, count : int, transpose : bool, value : [float] )
+extern glUniformMatrix4fv( location : int, count : int, transpose : bool, value: matrix.Matrix)
 
 -- OGL: Geometry
 extern glGenBuffers( n : int, buffers : [uint32] )
@@ -587,8 +648,8 @@ end
 function create_quad_batch( capacity : int ) : QuadBatch
     local qb : QuadBatch = QuadBatch { vert_gl  = 0u32,
                                        uv_gl    = 0u32,
-                                       vert_buf = [capacity*3*6:float],
-                                       uv_buf   = [capacity*2*6:float],
+                                       vert_buf = [capacity*3*6: float],
+                                       uv_buf   = [capacity*2*6: float],
                                        capacity = capacity,
                                        cursor   = 0 }
 
@@ -604,7 +665,7 @@ function create_quad_batch( capacity : int ) : QuadBatch
 
     glBindVertexArray(qb.vao)
     glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, qb.vert_gl )
+    glBindBuffer(GL_ARRAY_BUFFER, qb.vert_gl )
     glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
     glBindVertexArray(0u32)
 
@@ -638,24 +699,17 @@ function qb_end( qb : QuadBatch )
     glBindVertexArray(0u32)
 end
 
+
 function qb_render( qb : QuadBatch )
-
-
     glBindVertexArray(qb.vao)
     glDrawArrays( GL_TRIANGLES, 0u32, qb.cursor*6 );
-
-
 end
 
+
 function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float)
-
-    --[[
-
-    d - c
-    | / |
-    a - b
-
-    ]]--
+--    d - c
+--    | / |
+--    a - b
 
     local i : int = qb.cursor*3*6 -- (x,y) * vert_count * triangle_count_per_quad
 
@@ -709,14 +763,15 @@ function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float,
     qb.uv_buf[i+11] = v1
 
     qb.cursor = qb.cursor + 1
-
 end
+
 
 function qb_write( qb : QuadBatch, where_pos:int, x : float, y : float, z : float)
     qb.vert_buf[where_pos + 0] = x
     qb.vert_buf[where_pos + 1] = y
     qb.vert_buf[where_pos + 2] = z
 end
+
 
 function qb_write_cube_side(qb : QuadBatch, where_pos:int, where_uv:int, x:float, y:float, z:float, ux:float, uy:float, uz:float, vx:float, vy:float, vz:float, u:float, v:float)
     qb_write(qb, where_pos + 0, x - ux - vx, y - uy - vy, z - uz - vz);
@@ -770,15 +825,10 @@ function qb_write_plusbox(qb:QuadBatch, t:float)
     end
 end
 
-function qb_add_3d( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float, z:[float])
-
-    --[[
-
-    d - c
-    | / |
-    a - b
-
-    ]]
+function qb_add_3d(qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float, z:[float])
+--   d - c
+--   | / |
+--   a - b
 
     local i : int = qb.cursor*3*6 -- (x,y) * vert_count * triangle_count_per_quad
 
@@ -846,9 +896,9 @@ end
 function create_quad() : uint32
     local buffers : [uint32] = [1:uint32]
     glGenBuffers( 1, buffers )
-    check_error("creating geo buffers", true )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
-    check_error( "binding geo buffers", true )
+    check_error("creating geo buffers", true)
+    glBindBuffer(GL_ARRAY_BUFFER, buffers[0])
+    check_error("binding geo buffers", true)
 
     local data : [float] = [12:float]
     data[0] = -1.0f
@@ -880,7 +930,6 @@ function create_quad() : uint32
     glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
     glVertexAttribPointer(0u32, 2, GL_FLOAT, false, 0, 0);
 
-    -- return buffers[0]
     return vao[0]
 end
 
@@ -918,202 +967,6 @@ function create_shader( vert_src : String, frag_src : String ) : uint32
     return shader
 end
 
-function ortho_matrix( l : float, r : float, b : float, t : float, n : float, f : float ) : [float]
-    local mtx : [float] = [16:float]
-
-    --x, y
-    mtx[0] = 2.0f/(r-l);
-    mtx[1] = 0.0f;
-    mtx[2] = 0.0f;
-    mtx[3] = -(r+l)/(r-l);
-
-    mtx[4] = 0.0f;
-    mtx[5] = 2.0f/(t-b);
-    mtx[6] = 0.0f;
-    mtx[7] = -(t+b)/(t-b);
-
-    mtx[8] = 0.0f;
-    mtx[9] = 0.0f;
-    mtx[10] = -2.0f/(f-n);
-    mtx[11] = -(f+n)/(f-n);
-
-    mtx[12] = 0.0f;
-    mtx[13] = 0.0f;
-    mtx[14] = 0.0f;
-    mtx[15] = 1.0f;
-
-    return mtx
-end
-
-function persp_mtx( l : float, r : float, b : float, t : float, n : float, f : float ) : [float]
-    local mtx : [float] = [16:float]
-
-    --x, y
-    mtx[0] = 2.0f/(r-l);
-    mtx[1] = 0.0f;
-    mtx[2] = -(r+l)/(r-l);
-    mtx[3] = 0.0f;
-
-    mtx[4] = 0.0f;
-    mtx[5] = 2.0f/(t-b);
-    mtx[6] = -(t+b)/(t-b);
-    mtx[7] = 0.0f;
-
-    mtx[8] = 0.0f;
-    mtx[9] = 0.0f;
-    mtx[10] = -(f+n)/(n-f);
-    mtx[11] = -2.0f*f*n/(n-f);
-
-    mtx[12] = 0.0f;
-    mtx[13] = 0.0f;
-    mtx[14] = -1.0f;
-    mtx[15] = 0.0f;
-    return mtx
-end
-
-
-function scale_mtx(x:float, y:float, z:float) : [float]
-    local mtx : [float] = [16:float]
-    mtx[0] = x
-    mtx[1] = 0.0f
-    mtx[2] = 0.0f
-    mtx[3] = 0.0f
-
-    mtx[4] = 0.0f
-    mtx[5] = y
-    mtx[6] = 0.0f
-    mtx[7] = 0.0f
-
-    mtx[8] = 0.0f
-    mtx[9] = 0.0f
-    mtx[10] = z
-    mtx[11] = 0.0f
-
-    mtx[12] = 0.0f
-    mtx[13] = 0.0f
-    mtx[14] = 0.0f
-    mtx[15] = 1.0f
-    return mtx
-end
-
-function ident_mtx() : [float]
-    return scale_mtx(1.0f, 1.0f, 1.0f)
-end
-
-function trans_mtx(x:float, y:float, z:float) : [float]
-    local mtx : [float] = ident_mtx()
-    mtx[3] = x
-    mtx[7] = y
-    mtx[11] = z
-    return mtx
-end
-
-function mtx_mul(a:[float], b:[float]) : [float]
-    local mtx : [float] = [16:float]
-    for c=0, 4 do
-        for d=0, 4 do
-            local sum = 0.0f
-            for k=0, 4 do
-                sum = sum + a[4*c + k] * b[4*k + d]
-            end
-            mtx[4*c + d] = sum
-        end
-    end
-    return mtx
-end
-
-function mtx_interp(a:[float], b:[float], t:float) : [float]
-    local mtx : [float] = [16:float]
-    for c=0, 16 do
-        mtx[c] = a[c] * (1f-t) + b[c] * t
-    end
-    return mtx
-end
-
-function mtx_rotate_X(Q : [float], angle: float) : [float]
-    -- io.println(angle)
-    local s : float = math.sin(angle);
-    local c : float = math.cos(angle);
-    local R : [float] = [16:float]
-
-    R[0] = 1.f;
-    R[1] = 0.f;
-    R[2] = 0.f;
-    R[3] = 0.f;
-    R[4] = 0.f;
-    R[5] =   c;
-    R[6] =   s;
-    R[7] = 0.f;
-    R[8] = 0.f;
-    R[9] =  -s;
-    R[10] =   c;
-    R[11] = 0.f;
-    R[12] = 0.f;
-    R[13] = 0.f;
-    R[14] = 0.f;
-    R[15] = 1.f;
-
-    return mtx_mul(R, Q)
-    -- return R
-end
-
-function mtx_rotate_Y(Q : [float], angle : float) : [float]
-    local s : float = math.sin(angle)
-    local c : float = math.cos(angle)
-    local R : [float] =  [16:float]
-
-    R[0] = c
-    R[1] = 0.f
-    R[2] = s
-    R[3] = 0.f
-    R[4] = 0.f
-    R[5] = 1.f
-    R[6] = 0.f
-    R[7] = 0.f
-    R[8] = -s
-    R[9] = 0.f
-    R[10] = c
-    R[11] = 0.f
-    R[12] = 0.f
-    R[13] = 0.f
-    R[14] = 0.f
-    R[15] = 1.f
-
-    return mtx_mul(R, Q)
-end
-
-function mtx_rotate_Z(Q : [float], angle : float) : [float]
-    local s : float = math.sin(angle)
-    local c : float = math.cos(angle)
-    local R : [float] =  [16:float]
-
-    R[0] = c
-    R[1] = s
-    R[2] = 0.f
-    R[3] = 0.f
-    R[4] = -s
-    R[5] = c
-    R[6] = 0.f
-    R[7] = 0.f
-    R[8] = 0.f
-    R[9] = 0.f
-    R[10] = 1.f
-    R[11] = 0.f
-    R[12] = 0.f
-    R[13] = 0.f
-    R[14] = 0.f
-    R[15] = 1.f
-
-    return mtx_mul(R, Q)
-end
-
-function vec_mul(mtx:[float], vec:[float]) : [float]
-    local out : [float] = [4:float]
-    for k=0, #out do
-        out[k] = mtx[4*k+0] * vec[0] + mtx[4*k+1] * vec[1] + mtx[4*k+2] * vec[2] + mtx[4*k+3] * vec[3];
-    end
-    return out
-end
 
 -- ugly LUT
 local lut_u : [float] = [16*16:float]
@@ -1224,9 +1077,6 @@ local test_psys : ParticleSystem = ParticleSystem {
 function init_meshy_cube()
     test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
 
-    -- gen_cube_particles( 0.0f, 0.0f, 0.0f, 200.0f, 200.0f, 200.0f, test_psys )
-    -- gen_square_points( 0.0f, 0.0f, 200.0f, 200.0f, test_psys, MAX_PARTICLE_COUNT )
-
     for i=0, MAX_PARTICLE_COUNT do
         local a : float = random() * 3.14f * 2.0f
         test_psys.particle_buf[i].pos[0] = math.cos(a) * 2048.0f
@@ -1259,8 +1109,6 @@ function gen_points_from_line( v0 : [float], v1 : [float], points_per_line : int
 end
 
 function gen_square_points( x : float, y : float, w : float, h : float, ps : ParticleSystem, point_count : int )
-    -- local points : [float] = [point_count*3:float]
-
     local wh : float = w / 2.0f
     local hh : float = h / 2.0f
 
@@ -1292,12 +1140,10 @@ function gen_square_points( x : float, y : float, w : float, h : float, ps : Par
     gen_points_from_line( v1, v2, ppl_i, ps, ppl_i*1 )
     gen_points_from_line( v2, v3, ppl_i, ps, ppl_i*2 )
     gen_points_from_line( v3, v0, ppl_i, ps, ppl_i*3 )
-
-    -- return points
 end
 
-function gen_plus_side( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, start_i : int, mtx : [float] ) : int
 
+function gen_plus_side( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, start_i : int, mtx: [float] ) : int
     local wh : float = w / 2.0f
     local hh : float = h / 2.0f
     local dh : float = d / 2.0f
@@ -1362,47 +1208,8 @@ function gen_plus_side( x : float, y : float, z : float, w : float, h : float, d
 
 end
 
---[[
-function gen_logo_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
-    local rmtx : [float] = ident_mtx()
-
-    rmtx = ident_mtx()
-    rmtx = mtx_rotate_x(rmtx, 3.14/2.0)
-    rmtx = mtx_mul(mtx, rmtx)
-    gen_plus_side( x, y, z, w, h, d, ps, 0, rmtx )
-
-    rmtx = ident_mtx()
-    rmtx = mtx_rotate_x(rmtx, 3.14/2.0 * 2.0)
-    rmtx = mtx_mul(mtx, rmtx)
-    gen_plus_side( x, y, z, w, h, d, ps, 4, rmtx )
-
-    rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
-    gen_plus_side( x, y, z, w, h, d, ps, 8, rmtx )
-    rmtx = mtx_rotate_X(rmtx, 3.14/2.0)
-    gen_plus_side( x, y, z, w, h, d, ps, 12, rmtx )
-
-    rmtx = ident_mtx()
-    rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
-    rmtx = mtx_mul(mtx, rmtx)
-    gen_plus_side( x, y, z, w, h, d, ps, 16, rmtx )
-
-    rmtx = ident_mtx()
-    rmtx = mtx_rotate_Y(rmtx, -3.14/2.0)
-    rmtx = mtx_mul(mtx, rmtx)
-    gen_plus_side( x, y, z, w, h, d, ps, 20, rmtx )
-    -- rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
-    -- gen_plus_side( x, y, z, w, h, d, ps, 20, rmtx )
-    -- rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
-    -- gen_plus_side( x, y, z, w, h, d, ps, 24, rmtx )
-    -- rmtx = mtx_rotate_Y(rmtx, 3.14/2.0)
-    -- gen_plus_side( x, y, z, w, h, d, ps, 28, rmtx )
-
-end
-]]
-
-function gen_pyramid_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
-
+function gen_pyramid_particles(x: float, y: float, z: float, w: float, h: float, d: float, ps: ParticleSystem, mtx: matrix.Matrix)
     local wh : float = w / 2.0f
     local hh : float = h / 2.0f
     local dh : float = d / 2.0f
@@ -1418,44 +1225,48 @@ function gen_pyramid_particles( x : float, y : float, z : float, w : float, h : 
     v0[1] = - hh
     v0[2] =   dh
     v0[3] = 1.0f
-    v0 = vec_mul(mtx, v0)
+    v0 = matrix.multiply(mtx, v0)
 
     v1[0] =   wh
     v1[1] = - hh
     v1[2] =   dh
     v1[3] = 1.0f
-    v1 = vec_mul(mtx, v1)
+    v1 = matrix.multiply(mtx, v1)
 
     v2[0] =   wh
     v2[1] = - hh
     v2[2] = - dh
     v2[3] = 1.0f
-    v2 = vec_mul(mtx, v2)
+    v2 = matrix.multiply(mtx, v2)
 
     v3[0] = - wh
     v3[1] = - hh
     v3[2] = - dh
     v3[3] = 1.0f
-    v3 = vec_mul(mtx, v3)
+    v3 = matrix.multiply(mtx, v3)
 
     v4[0] = 0.0f
     v4[1] =   hh
     v4[2] = 0.0f
     v4[3] = 1.0f
-    v4 = vec_mul(mtx, v4)
+    v4 = matrix.multiply(mtx, v4)
 
     v0[0] = v0[0] + x
     v0[1] = v0[1] + y
     v0[2] = v0[2] + z
+
     v1[0] = v1[0] + x
     v1[1] = v1[1] + y
     v1[2] = v1[2] + z
+
     v2[0] = v2[0] + x
     v2[1] = v2[1] + y
     v2[2] = v2[2] + z
+
     v3[0] = v3[0] + x
     v3[1] = v3[1] + y
     v3[2] = v3[2] + z
+
     v4[0] = v4[0] + x
     v4[1] = v4[1] + y
     v4[2] = v4[2] + z
@@ -1473,11 +1284,10 @@ function gen_pyramid_particles( x : float, y : float, z : float, w : float, h : 
     gen_points_from_line( v1, v4, ppl_i, ps, ppl_i*5 )
     gen_points_from_line( v2, v4, ppl_i, ps, ppl_i*6 )
     gen_points_from_line( v3, v4, MAX_PARTICLE_COUNT - ppl_i*7, ps, ppl_i*7 )
-
 end
 
-function gen_cube_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
 
+function gen_cube_particles(x: float, y: float, z: float, w: float, h: float, d: float, ps: ParticleSystem, mtx: matrix.Matrix)
     local wh : float = w / 2.0f
     local hh : float = h / 2.0f
     local dh : float = d / 2.0f
@@ -1496,71 +1306,78 @@ function gen_cube_particles( x : float, y : float, z : float, w : float, h : flo
     v0[1] = - hh
     v0[2] =   dh
     v0[3] = 1.0f
-    v0 = vec_mul(mtx, v0)
+    v0 = matrix.multiply(mtx, v0)
 
     v1[0] =   wh
     v1[1] = - hh
     v1[2] =   dh
     v1[3] = 1.0f
-    v1 = vec_mul(mtx, v1)
+    v1 = matrix.multiply(mtx, v1)
 
     v2[0] =   wh
     v2[1] =   hh
     v2[2] =   dh
     v2[3] = 1.0f
-    v2 = vec_mul(mtx, v2)
+    v2 = matrix.multiply(mtx, v2)
 
     v3[0] = - wh
     v3[1] =   hh
     v3[2] =   dh
     v3[3] = 1.0f
-    v3 = vec_mul(mtx, v3)
+    v3 = matrix.multiply(mtx, v3)
 
     v4[0] = - wh
     v4[1] = - hh
     v4[2] = - dh
     v4[3] = 1.0f
-    v4 = vec_mul(mtx, v4)
+    v4 = matrix.multiply(mtx, v4)
 
     v5[0] =   wh
     v5[1] = - hh
     v5[2] = - dh
     v5[3] = 1.0f
-    v5 = vec_mul(mtx, v5)
+    v5 = matrix.multiply(mtx, v5)
 
     v6[0] =   wh
     v6[1] =   hh
     v6[2] = - dh
     v6[3] = 1.0f
-    v6 = vec_mul(mtx, v6)
+    v6 = matrix.multiply(mtx, v6)
 
     v7[0] = - wh
     v7[1] =   hh
     v7[2] = - dh
     v7[3] = 1.0f
-    v7 = vec_mul(mtx, v7)
+    v7 = matrix.multiply(mtx, v7)
 
     v0[0] = v0[0] + x
     v0[1] = v0[1] + y
     v0[2] = v0[2] + z
+
     v1[0] = v1[0] + x
     v1[1] = v1[1] + y
     v1[2] = v1[2] + z
+
     v2[0] = v2[0] + x
     v2[1] = v2[1] + y
     v2[2] = v2[2] + z
+
     v3[0] = v3[0] + x
     v3[1] = v3[1] + y
     v3[2] = v3[2] + z
+
     v4[0] = v4[0] + x
     v4[1] = v4[1] + y
     v4[2] = v4[2] + z
+
     v5[0] = v5[0] + x
     v5[1] = v5[1] + y
     v5[2] = v5[2] + z
+
     v6[0] = v6[0] + x
     v6[1] = v6[1] + y
     v6[2] = v6[2] + z
+
     v7[0] = v7[0] + x
     v7[1] = v7[1] + y
     v7[2] = v7[2] + z
@@ -1569,27 +1386,25 @@ function gen_cube_particles( x : float, y : float, z : float, w : float, h : flo
     local points_per_line = MAX_PARTICLE_COUNT as float / lines as float
 
     local ppl_i = points_per_line as int
-    gen_points_from_line( v0, v1, ppl_i, ps, ppl_i*0 )
-    gen_points_from_line( v1, v2, ppl_i, ps, ppl_i*1 )
-    gen_points_from_line( v2, v3, ppl_i, ps, ppl_i*2 )
-    gen_points_from_line( v3, v0, ppl_i, ps, ppl_i*3 )
+    gen_points_from_line(v0, v1, ppl_i, ps, ppl_i*0)
+    gen_points_from_line(v1, v2, ppl_i, ps, ppl_i*1)
+    gen_points_from_line(v2, v3, ppl_i, ps, ppl_i*2)
+    gen_points_from_line(v3, v0, ppl_i, ps, ppl_i*3)
 
-    gen_points_from_line( v4, v5, ppl_i, ps, ppl_i*4 )
-    gen_points_from_line( v5, v6, ppl_i, ps, ppl_i*5 )
-    gen_points_from_line( v6, v7, ppl_i, ps, ppl_i*6 )
-    gen_points_from_line( v7, v4, ppl_i, ps, ppl_i*7 )
+    gen_points_from_line(v4, v5, ppl_i, ps, ppl_i*4)
+    gen_points_from_line(v5, v6, ppl_i, ps, ppl_i*5)
+    gen_points_from_line(v6, v7, ppl_i, ps, ppl_i*6)
+    gen_points_from_line(v7, v4, ppl_i, ps, ppl_i*7)
 
-    gen_points_from_line( v0, v4, ppl_i, ps, ppl_i*8 )
-    gen_points_from_line( v1, v5, ppl_i, ps, ppl_i*9 )
+    gen_points_from_line(v0, v4, ppl_i, ps, ppl_i*8)
+    gen_points_from_line(v1, v5, ppl_i, ps, ppl_i*9)
 
-    gen_points_from_line( v3, v7, ppl_i, ps, ppl_i*10 )
-    gen_points_from_line( v2, v6, MAX_PARTICLE_COUNT - ppl_i*11, ps, ppl_i*11 )
-
+    gen_points_from_line(v3, v7, ppl_i, ps, ppl_i*10)
+    gen_points_from_line(v2, v6, MAX_PARTICLE_COUNT - ppl_i*11, ps, ppl_i*11)
 end
 
 
-function gen_sphere_particles( x : float, y : float, z : float, w : float, h : float, d : float, ps : ParticleSystem, mtx : [float] )
-
+function gen_sphere_particles( x: float, y: float, z: float, w: float, h: float, d: float, ps: ParticleSystem, mtx: matrix.Matrix)
     local dt:float = 3.1415f * 2.0f * 16.0f / MAX_PARTICLE_COUNT as float
     for i=0, MAX_PARTICLE_COUNT do
        local tmp:[float] = [4:float];
@@ -1603,15 +1418,15 @@ function gen_sphere_particles( x : float, y : float, z : float, w : float, h : f
        tmp[2] = c * 100.0f * w + z;
        tmp[3] = 1.0f;
 
-       local tmp2:[float] = vec_mul(mtx, tmp);
+       local tmp2:[float] = matrix.multiply(mtx, tmp);
 
-        ps.particle_buf[i].target[0] = tmp2[0];
-        ps.particle_buf[i].target[1] = tmp2[1];
-        ps.particle_buf[i].target[2] = tmp2[2];
+       ps.particle_buf[i].target[0] = tmp2[0];
+       ps.particle_buf[i].target[1] = tmp2[1];
+       ps.particle_buf[i].target[2] = tmp2[2];
     end
 end
 
-function gen_plusbox_particles( ps : ParticleSystem, mtx : [float] )
+function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
     local lines:int = 0;
     local lp:int = 0;
     local kq:int = 0;
@@ -1674,9 +1489,9 @@ function gen_plusbox_particles( ps : ParticleSystem, mtx : [float] )
                             end
                             lines = lines - 1
                             if lines == 0 then
-                                gen_points_from_line(vec_mul(mtx, u), vec_mul(mtx, v), MAX_PARTICLE_COUNT - lp, ps, lp);
+                                gen_points_from_line(matrix.multiply(mtx, u), matrix.multiply(mtx, v), MAX_PARTICLE_COUNT - lp, ps, lp);
                             else
-                                gen_points_from_line(vec_mul(mtx, u), vec_mul(mtx, v), per, ps, lp);
+                                gen_points_from_line(matrix.multiply(mtx, u), matrix.multiply(mtx, v), per, ps, lp);
                             end
                             lp = lp + per
                         end
@@ -1820,16 +1635,11 @@ function run_particle_test(  )
 
         loop_end()
     end
-
-    scene_particle_release()
-
 end
 
-local apa : String = "asd"
 local particle_shader : uint32
 local mesh_shader : uint32
 local particle_qb : QuadBatch
--- local particle_mtx : [float] = ortho_mtx( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f)
 local particle_amount : int = 1024*10
 local particle_loc_mtx : int
 
@@ -1843,7 +1653,6 @@ local particle_loc_mtx : int
 -- local particle_buf : [@Particle] = [particle_amount:@Particle]
 
 function scene_particle_init()
-
     local vertex_src : String = read_file_as_string("data/shaders/particle_3d.vp")
     local fragment_src : String = read_file_as_string("data/shaders/particle.fp")
 
@@ -1854,87 +1663,24 @@ function scene_particle_init()
 
     particle_qb = create_quad_batch( particle_amount )
 
-
-    -- local vertex_mesh_src : String = read_file_as_string("data/shaders/mesh.vp")
-    -- mesh_shader = create_shader( vertex_mesh_src, fragment_src )
-    -- check_error("(mesh) create shader", false)
-
     init_meshy_cube()
-
-    --[[
-    qb_begin( particle_qb )
-    -- qb_add_centered( particle_qb, 320.0f, 320.0f, 640.0f, 640.0f, 0.0f, 0.0f, 1.0f, 1.0f )
-    qb_add( particle_qb,
-          0.0f,   0.0f,
-        640.0f, 640.0f,
-          0.0f,   0.0f,
-          1.0f,   1.0f )
-    qb_end( particle_qb )
-    ]]
-
-    -- init particles
-    --[[
-    local i : int = 0
-    while (i < particle_amount) do
-
-        particle_buf[i].pos[0] = 0.0f
-        -- particle_buf[i].pos[0] = (random() * 2.0f - 1.0f) * 320.0f
-        particle_buf[i].pos[1] = 0.0f
-        -- particle_buf[i].pos[1] = (random() * 2.0f - 1.0f) * 320.0f
-        particle_buf[i].pos[2] = 0.0f
-
-        -- local angle = random() * 3.14f * 2.0f
-        -- local asd = random() * 10.0f
-        -- particle_buf[i].vel[0] = float(sin(double(angle))) * asd
-        -- particle_buf[i].vel[1] = float(cos(double(angle))) * asd
-        -- particle_buf[i].vel[2] = 0.0f
-
-        i = i + 1
-    end
-    ]]
-
 end
 
-function scene_particle_draw(window : uint64, mtx : [float], delta : float)
-    local width  : [int] = [1:int]
-    local height : [int] = [1:int]
-    glfwGetFramebufferSize( window, width, height )
+function scene_particle_draw(window : uint64, mtx : matrix.Matrix, delta : float)
+    -- TODO fix allocation
+    local width: [int] = [1:int]
+    local height: [int] = [1:int]
+    glfwGetFramebufferSize(window, width, height)
     local widthf = width[0] as float
     local heightf = height[0] as float
 
     local deltaf = delta
-    -- io.println(widthf)
-    -- local particle_mtx = ortho_mtx( -widthf / 2.0f, widthf / 2.0f, -heightf / 2.0f, heightf / 2.0f, 0.0f, 1.0f)
 
-    glDisable( GL_DEPTH_TEST )
-    glEnable( GL_BLEND )
-    glBlendFunc( GL_ONE, GL_ONE )
+    glDisable(GL_DEPTH_TEST)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_ONE, GL_ONE)
 
-    update_meshy_cube( test_psys, particle_qb, delta)
-
-    --[[
-    qb_begin( particle_qb )
-    -- qb_add_centered( particle_qb, widthf / 2.0f, heightf / 2.09f, widthf, heightf, 0.0f, 0.0f, 1.0f, 1.0f )
-    local i : int = 0
-    while (i < particle_amount) do
-
-        -- particle_buf[i].pos[0] = particle_buf[i].pos[0] + deltaf*particle_buf[i].vel[0]
-        -- particle_buf[i].pos[1] = particle_buf[i].pos[1] + deltaf*particle_buf[i].vel[1]
-        -- particle_buf[i].pos[2] = particle_buf[i].pos[2] + deltaf*particle_buf[i].vel[2]
-
-        qb_add_centered( particle_qb,
-            -- widthf / 2.0f + (random() * 2.0f - 1.0f) * widthf,
-            particle_buf[i].pos[0],
-            -- (random() * 2.0f - 1.0f) * widthf,
-            particle_buf[i].pos[1],
-            -- (random() * 2.0f - 1.0f) * heightf,
-            -- heightf / 2.0f + (random() * 2.0f - 1.0f) * heightf,
-            8.0f, 8.0f,
-            0.0f, 0.0f, 1.0f, 1.0f )
-        i = i + 1
-    end
-    qb_end( particle_qb )
-    ]]
+    update_meshy_cube(test_psys, particle_qb, delta)
 
     glUseProgram(particle_shader)
     glUniformMatrix4fv(particle_loc_mtx, 1, true, mtx)
@@ -1942,14 +1688,8 @@ function scene_particle_draw(window : uint64, mtx : [float], delta : float)
 
 end
 
-function scene_particle_release()
-
-    apa = ""
-
-end
 
 function create_mesh( path : String ) : uint32
-
     local buffers : [uint32] = [1:uint32]
     glGenBuffers( 1, buffers )
     glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
@@ -1986,10 +1726,6 @@ function unused_render( window : uint64, delta : double )
     local width  : [int] = [1:int]
     local height : [int] = [1:int]
     glfwGetFramebufferSize( window, width, height )
-    -- glfwGetWindowSize( window, width, height )
-
-
-    -- local ortho_mtx = ortho_mtx( 0, width, 0, height, -1.0f, 1.0f )
 
     glViewport(0,0,width[0],height[0])
     glClearColor(0.2f, 0.2f, 0.2f, 1.0f)
@@ -2137,8 +1873,6 @@ function run_floor()
     local next_switch = 0u64;
 
     while loop_begin() do
---        render_to_fbo(screen_fbo )
-
         glfwGetFramebufferSize( window, width, height )
         widthf = width[0] as float
         heightf = height[0] as float
@@ -2150,7 +1884,6 @@ function run_floor()
         FMOD_Channel_GetPosition(music_channel, tm, 1u64);
 
         if tm[0].val > 12000u64 then
---      if tm[0].val > 1000u64 then
            to_water = to_water + (1.0f - to_water) * 3.0f * delta
            if to_water > 1.0f then
               to_water = 1.0f
@@ -2158,14 +1891,12 @@ function run_floor()
         end
 
         if tm[0].val > 42000u64 then
---      if tm[0].val > 3000u64 then
            to_logo = to_logo + (1.0f - to_logo) * 3.0f * delta
            if to_logo > 1.0f then
               to_logo = 1.0f
            end
         end
 
---      if tm[0].val > 2000u64 then
         if tm[0].val > 25500u64 then
            if psyk_t == 0.0f then
               next_switch = 0u64;
@@ -2198,9 +1929,7 @@ function run_floor()
         glClear( 0x4100u32 )
         glDisable( GL_BLEND )
         glEnable( GL_DEPTH_TEST )
-        glDisable( GL_CULL_FACE )
-
-        local ortho_mtx = ortho_matrix( 0.0f, 320.0f, 0.0f, 320.0f, 0.0f, 1.0f);
+        glDisable( GL_CULL_FACE)
 
         local dolly = logo_t * 0.9f
         if dolly > 1.0f then
@@ -2210,8 +1939,8 @@ function run_floor()
         local fov = 2.0f - 1.8f * dolly
         local dolly_dist = (2000f-250f) * dolly
         local elevate = 100.0f * dolly
-        local persp = persp_mtx( -0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 1.0f + dolly_dist, 700.0f + dolly_dist)
-        local camera = mtx_mul(persp, trans_mtx(0.0f, -elevate -50.0f + (1f-to_logo)*math.sin(t*0.2f)*10.0f, -250.0f - dolly_dist))
+        local persp: matrix.Matrix = matrix.persp(-0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 1.0f + dolly_dist, 700.0f + dolly_dist)
+        local camera: matrix.Matrix = matrix.multiply(persp, matrix.trans(0.0f, -elevate -50.0f + (1f-to_logo)*math.sin(t*0.2f)*10.0f, -250.0f - dolly_dist))
 
         glUseProgram(floor_shader)
         glUniformMatrix4fv(loc_mtx, 1, true, camera)
@@ -2234,21 +1963,25 @@ function run_floor()
         cur = 1 - cur
 
         -- particles
-        local imtx : [float] = ident_mtx();
-        local rot_mtx : [float] = mtx_rotate_X(imtx, t*1.1f);
-        rot_mtx = mtx_rotate_Z(rot_mtx, (t*0.7f))
+        local imtx = matrix.ident();
+        local rot_mtx = matrix.rotate_X(imtx, t*1.1f);
+        rot_mtx = matrix.rotate_Z(rot_mtx, (t*0.7f))
 
         local move:float = psyk_t;
         if move > 1.0f then
            move = 1.0f;
         end
 
-        local dip_mtx = trans_mtx(math.sin(psyk_t)*move*200.0f,math.cos(psyk_t*3.0f) * 200.0f - 50.0f,math.cos(psyk_t*0.74f)*move*200.0f);
-        rot_mtx = mtx_mul(dip_mtx, rot_mtx);
+        local dip_mtx = matrix.trans(math.sin(psyk_t)*move*200.0f,math.cos(psyk_t*3.0f) * 200.0f - 50.0f,math.cos(psyk_t*0.74f)*move*200.0f);
+        rot_mtx = matrix.multiply(dip_mtx, rot_mtx);
 
 
-        local for_logo = mtx_mul(mtx_mul(trans_mtx(0f, 1.4f * elevate + 50.0f, 0f), mtx_mul(mtx_rotate_X(ident_mtx(), -0.25f*3.1415f), mtx_rotate_Y(ident_mtx(), 0.25f*3.1415f))), mtx_rotate_Z(ident_mtx(), 0.0f));
-        rot_mtx = mtx_interp(rot_mtx, for_logo, to_logo);
+        local for_logo = matrix.multiply(
+            matrix.multiply(
+                matrix.trans(0f, 1.4f * elevate + 50.0f, 0f),
+                matrix.multiply(matrix.rotate_X(matrix.ident(), -0.25f*3.1415f), matrix.rotate_Y(matrix.ident(), 0.25f*3.1415f))),
+            matrix.rotate_Z(matrix.ident(), 0.0f));
+        rot_mtx = matrix.interp(rot_mtx, for_logo, to_logo);
 
         if logo_t > 0.0f then
             test_psys.figure = PARTICLE_FIGURE_PLUSBOX
@@ -2263,20 +1996,18 @@ function run_floor()
         end
 
         if water_t > 0.0f then
-
             if (test_psys.mode == PARTICLE_MODE_STATIC) then
                 test_psys.mode = PARTICLE_MODE_FOLLOW;
             end
-            -- gen_logo_particles(0.0f, 0.0f, 0.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
 
             if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
-                gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx)
             elseif ( test_psys.figure == PARTICLE_FIGURE_SPHERE) then
-                gen_sphere_particles(0.0f, 0.0f, 10.0f, 80.0f, 80.0f, 80.0f, test_psys, rot_mtx )
+                gen_sphere_particles(0.0f, 0.0f, 10.0f, 80.0f, 80.0f, 80.0f, test_psys, rot_mtx)
             elseif ( test_psys.figure == PARTICLE_FIGURE_PYRAMID) then
-                gen_pyramid_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx )
+                gen_pyramid_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx)
             else
-                gen_plusbox_particles(test_psys, rot_mtx )
+                gen_plusbox_particles(test_psys, rot_mtx)
             end
 
             if do_switch == 1 then
@@ -2316,14 +2047,19 @@ function run_floor()
         end
 
         glUseProgram(voxel_shader);
-        glUniformMatrix4fv(glGetUniformLocation(voxel_shader, "mtx"), 1, true, mtx_mul(camera, mtx_mul(rot_mtx, mtx_mul(scale_mtx(0.75f,0.75f,0.75f),scale_mtx(13.3f,13.3f,13.3f)))))
+        glUniformMatrix4fv(
+            glGetUniformLocation(voxel_shader, "mtx"),
+            1,
+            true,
+            matrix.multiply(camera,
+                            matrix.multiply(rot_mtx,
+                                            matrix.multiply(matrix.scale(0.75f,0.75f,0.75f),
+                                                            matrix.scale(13.3f,13.3f,13.3f)))))
 
         qb_begin(voxel_qb);
         qb_write_plusbox(voxel_qb, logo_t - 0.3f);
         qb_end(voxel_qb);
         qb_render(voxel_qb);
-
-
 
         glUseProgram(particle_shader)
         scene_particle_draw(window, camera, 0.1f)
@@ -2351,16 +2087,10 @@ function run_floor()
             end
         end
 
-        -- glUseProgram(mesh_shader)
-        -- local mtxloc = glGetUniformLocation( mesh_shader, "mtx")
-        -- glUniformMatrix4fv(mtxloc, 1, true, camera)
-        -- glBindVertexArray(mesh_vbo)
-        -- glDrawArrays( GL_TRIANGLES, 0u32, 48 );
-
         ----- TEXt
         glDisable(GL_DEPTH_TEST);
 
-        local ortho_mtx = ortho_matrix( 0.0f, 800.0f, 0.0f, 600.0f, 0.0f, 1.0f )
+        local ortho_mtx = matrix.ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.0f, 1.0f)
         local location_mtx = glGetUniformLocation( text_shader, "mtx")
         local location_anim = glGetUniformLocation( text_shader, "anim")
         local location_offset = glGetUniformLocation( text_shader, "offset")
@@ -2400,13 +2130,6 @@ function run_floor()
 
         t = t + delta
 
-        -- render to backbuffer
---        render_to_fbo( 0u32 )
---        glUseProgram(screen_shader)
---        glBindTexture(GL_TEXTURE_2D, screen_texture);
- --       glBindVertexArray(screen_quad)
- --       glDrawArrays( GL_TRIANGLES, 0u32, 1*6 );
-
         -- redner logo
         if (logo_t > 100.0f) then
             glUseProgram(screen_shader)
@@ -2424,7 +2147,6 @@ function run_floor()
         loop_end()
     end
 
-    scene_particle_release()
 end
 
 function init_audio() : uint64
@@ -2483,86 +2205,3 @@ local line3: String = "awesome scroller - check it"
 
 local mesh_vbo : uint32 = 0u32
 
-!main
-function main(args:[String]): int
-
-    create_lut()
-
-    -- chdir("/Users/svenandersson/Documents/development/demo/")
-
-    if (glfwInit() == 0) then
-        return -1
-    end
-
-    -- get a ogl >= 3.2 context on OSX
-    -- lets us use layout(location = x)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3u32);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2u32);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    window = glfwCreateWindow( 800, 600, "sol", 0u64, 0u64)
-
-    if (window ~= 0u64) then
-        glfwShowWindow( window )
-
-        -- init audio and load sound
-        local sound_system = init_audio()
-        local drum_sound = load_sound( sound_system, "data/music/skadad.mp3" )
-        music_channel = play_sound( sound_system, drum_sound )
-
-        local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
-        -- io.println("vertex_src: " .. vertex_src)
-        local fragment_src : String = read_file_as_string("data/shaders/shader.fp")
-        -- io.println("fragment_src: " .. fragment_src)
-
-        local shader = create_shader( vertex_src, fragment_src )
-        local quad = create_quad()
-        local qb : QuadBatch = create_quad_batch( 1024 )
-        qb_begin(qb)
-        -- qb_add( qb, -100.0f, -100.0f, 100.0f, 100.0f, 0.0f, 0.0f, 1.0f, 1.0f )
-        qb_text(qb, 0.0f, 220.0f, line1, 16.0f, 12.0f)
-        qb_text(qb, 100.0f, 160.0f, line2, 32.0f, 24.0f)
-        qb_text(qb, 0.0f, 80.0f, line1, 16.0f, 12.0f)
-        -- qb_add( qb, -1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f )
-        qb_end( qb )
-
-
-        -- load logo mesh
-        -- mesh_vbo = create_mesh_from_file( "test" )
-        -- mesh_vbo = create_mesh( "test" )
-
-        local alt_text : QuadBatch = create_quad_batch( 1024 )
-        qb_begin(alt_text)
-        qb_text(alt_text, 160.0f-16.0f*5.5f , 5.0f, "DEFOLD CREW", 32.0f, 16.0f)
-        qb_end(alt_text)
-
-        -- setup()
-        local tex0_data : [byte] = read_file( "data/textures/consolefont.raw" )
-        local tex0 = create_texture(256, 256, tex0_data)
-        --[[
-        local tex0 = create_texture(2, 1, [255u8,0u8,0u8,255u8,
-                                           0u8,255u8,0u8,255u8,
-                                           0u8,0u8,255u8,255u8,
-                                           255u8,255u8,255u8,255u8])
-        ]]
-
-        local anim = 0.0f
-        local last_time_stamp = glfwGetTime()
-
-        -- init scenes
-        -- scene_particle_init()
-        -- run_particle_test()
-        run_floor()
-    else
-        io.println("could not create window!")
-    end
-
-    -- release scenes
-    scene_particle_release()
-
-    glfwTerminate()
-    io.println("glfw terminated!")
-
-    return 0
-end
