@@ -547,6 +547,7 @@ function create_texture( width : int, height : int, data : [byte] ) : uint32
     return texture
 end
 
+
 function create_empty_texture( width : int, height : int ) : uint32
     local textures : [uint32] = [1:uint32]
     glGenTextures(1, textures )
@@ -568,8 +569,8 @@ function create_empty_texture( width : int, height : int ) : uint32
     return texture
 end
 
-function create_fbo( width : int, height : int, attach_depth : bool ) : uint32, uint32
 
+function create_fbo( width : int, height : int, attach_depth : bool ) : uint32, uint32
     io.print(width)
     io.print(height)
 
@@ -604,8 +605,8 @@ function create_fbo( width : int, height : int, attach_depth : bool ) : uint32, 
     glBindFramebuffer( GL_FRAMEBUFFER, 0u32 )
 
     return fbo, texture
-
 end
+
 
 function render_to_fbo( fbo : uint32 )
     glBindFramebuffer( GL_FRAMEBUFFER, fbo )
@@ -643,6 +644,7 @@ end
 --     return vao_obj
 
 -- end
+
 
 function create_quad_batch( capacity : int ) : QuadBatch
     local qb : QuadBatch = QuadBatch { vert_gl  = 0u32,
@@ -1290,9 +1292,8 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
                             v.y = (v.y - 1.5f) * 50.0f
                             u.z = (u.z - 1.5f) * 50.0f
                             v.z = (v.z - 1.5f) * 50.0f
-                            u.w = (1.0f - 1.5f) * 50.0f
-                            v.w = (1.0f - 1.5f) * 50.0f
-
+                            u.w = 1.0f
+                            v.w = 1.0f
                             lines = lines - 1
                             if lines == 0 then
                                 gen_points_from_line(matrix.multiply(mtx, u).vec3(), matrix.multiply(mtx, v).vec3(), MAX_PARTICLE_COUNT - lp, ps, lp);
@@ -1758,7 +1759,6 @@ function run_floor()
                 test_psys.cool_down = 3.0f
                 test_psys.next_mode = PARTICLE_MODE_FOLLOW
 
-                local i = 0
                 local amp = 30.0f
                 for particle in test_psys.particle_buf do
                     local a1 = random() * 3.14f * 2.0f
