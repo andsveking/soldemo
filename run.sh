@@ -1,9 +1,9 @@
 set -e
 
 if [ -z ${SOL_HOME+x} ]; then
-        echo "ERROR: SOL_HOME is unset, set it to the install directory of sol compiler!"
-        echo "ERROR: donwload from http://defold-slask.s3-website-eu-west-1.amazonaws.com/sol/sol-0.1.13.tar.gz"
-        exit 1
+    echo "ERROR: SOL_HOME is unset, set it to the install directory of sol compiler!"
+    echo "ERROR: donwload from http://defold-slask.s3-website-eu-west-1.amazonaws.com/sol/sol-0.1.14.tar.gz"
+    exit 1
 fi
 
 ${SOL_HOME}/bin/solc --emit obj --keep -output-dir build demo.sol

@@ -12,22 +12,22 @@ struct Matrix
         local c = math.cos(angle);
         local R = Matrix{}
 
-        R.data[0] = 1.f;
-        R.data[1] = 0.f;
-        R.data[2] = 0.f;
-        R.data[3] = 0.f;
-        R.data[4] = 0.f;
-        R.data[5] =   c;
-        R.data[6] =   s;
-        R.data[7] = 0.f;
-        R.data[8] = 0.f;
-        R.data[9] =  -s;
-        R.data[10] =   c;
-        R.data[11] = 0.f;
-        R.data[12] = 0.f;
-        R.data[13] = 0.f;
-        R.data[14] = 0.f;
-        R.data[15] = 1.f;
+        R.data[0] = 1.f
+        R.data[1] = 0.f
+        R.data[2] = 0.f
+        R.data[3] = 0.f
+        R.data[4] = 0.f
+        R.data[5] = c
+        R.data[6] = s
+        R.data[7] = 0.f
+        R.data[8] = 0.f
+        R.data[9] = -s
+        R.data[10] = c
+        R.data[11] = 0.f
+        R.data[12] = 0.f
+        R.data[13] = 0.f
+        R.data[14] = 0.f
+        R.data[15] = 1.f
 
         return multiply(R, self)
     end
@@ -199,15 +199,6 @@ fn interp(a: Matrix, b: Matrix, t:float): Matrix
         mtx.data[c] = a.data[c] * (1f-t) + b.data[c] * t
     end
     return mtx
-end
-
-
-function multiply(mtx: Matrix, vec:[float]): [float]
-    local out = [4:float]
-    for k=0, 4 do
-        out[k] = mtx.data[4*k+0] * vec[0] + mtx.data[4*k+1] * vec[1] + mtx.data[4*k+2] * vec[2] + mtx.data[4*k+3] * vec[3];
-    end
-    return out
 end
 
 

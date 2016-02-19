@@ -2,14 +2,17 @@ module demo
 
 require io
 require math
+require rnd
+
 require matrix
 require vector
 
+let rng: rnd.MT19937 = rnd.MT19937{}
+
 !main
 function main(args:[String]): int
+    rng.seed(0u32)
     create_lut()
-
-    -- chdir("/Users/svenandersson/Documents/development/demo/")
 
     if (glfwInit() == 0) then
         return -1
@@ -229,7 +232,6 @@ end
 !nogc extern fclose( stream : uint64 ) : int
 !nogc extern fread( ptr : [byte], size : int, count : int, stream : uint64) : int64
 !nogc extern chdir(path : String) : int
-!nogc extern rand() : int
 
 
 -----------------------------------------------------------------------
@@ -455,9 +457,8 @@ function log_ok( id : String )
 end
 
 function random() : float
-    return rand() as float / RAND_MAX as float
+    return rng.next_float()
 end
-
 
 function check_error( id : String, print_on_ok : bool ) : bool
     local err = glGetError()
