@@ -1079,9 +1079,8 @@ local test_psys : ParticleSystem = ParticleSystem {
 function init_meshy_cube()
     test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
 
-    for i=0, MAX_PARTICLE_COUNT do
+    for particle in test_psys.particle_buf do
         local a : float = random() * 3.14f * 2.0f
-        let particle = test_psys.particle_buf[i]
         particle.pos.data[0] = math.cos(a) * 2048.0f
         particle.pos.data[1] = math.sin(a) * 1048.0f + 1100.0f
         particle.pos.data[2] = 2000.0f
@@ -1091,21 +1090,16 @@ end
 
 
 function gen_points_from_line(v0: vector.Vector3, v1: vector.Vector3, points_per_line: int, ps: ParticleSystem, fill_start : int)
-    local vec = vector.vec3()
-    local step = vector.vec3()
-    vec.data[0] = v1.data[0] - v0.data[0]
-    vec.data[1] = v1.data[1] - v0.data[1]
-    vec.data[2] = v1.data[2] - v0.data[2]
-    step.data[0] = vec.data[0] / points_per_line as float
-    step.data[1] = vec.data[1] / points_per_line as float
-    step.data[2] = vec.data[2] / points_per_line as float
+    local vec = vector.vec3(v1.data[0] - v0.data[0], v1.data[1] - v0.data[1], v1.data[2] - v0.data[2])
+    local step = vector.vec3(vec.data[0] / points_per_line as float,
+                             vec.data[1] / points_per_line as float,
+                             vec.data[2] / points_per_line as float)
 
     local d = 0.0f
     for i=fill_start, fill_start + points_per_line do
-        let target = ps.particle_buf[i].target
-        target.data[0] = v0.data[0] + step.data[0] * d
-        target.data[1] = v0.data[1] + step.data[1] * d
-        target.data[2] = v0.data[2] + step.data[2] * d
+        ps.particle_buf[i].target = vector.vec3(v0.data[0] + step.data[0] * d,
+                                                v0.data[1] + step.data[1] * d,
+                                                v0.data[2] + step.data[2] * d)
         d = d + 1.0f
     end
 end
@@ -1161,10 +1155,10 @@ function gen_pyramid_particles(x: float, y: float, z: float, w: float, h: float,
     gen_points_from_line(v2, v3, ppl_i, ps, ppl_i*2 )
     gen_points_from_line(v3, v0, ppl_i, ps, ppl_i*3 )
 
-    gen_points_from_line( v0, v4, ppl_i, ps, ppl_i*4 )
-    gen_points_from_line( v1, v4, ppl_i, ps, ppl_i*5 )
-    gen_points_from_line( v2, v4, ppl_i, ps, ppl_i*6 )
-    gen_points_from_line( v3, v4, MAX_PARTICLE_COUNT - ppl_i*7, ps, ppl_i*7 )
+    gen_points_from_line(v0, v4, ppl_i, ps, ppl_i*4 )
+    gen_points_from_line(v1, v4, ppl_i, ps, ppl_i*5 )
+    gen_points_from_line(v2, v4, ppl_i, ps, ppl_i*6 )
+    gen_points_from_line(v3, v4, MAX_PARTICLE_COUNT - ppl_i*7, ps, ppl_i*7 )
 end
 
 
@@ -1215,25 +1209,22 @@ end
 
 
 function gen_sphere_particles( x: float, y: float, z: float, w: float, h: float, d: float, ps: ParticleSystem, mtx: matrix.Matrix)
-    local dt:float = 3.1415f * 2.0f * 16.0f / MAX_PARTICLE_COUNT as float
-    for i=0, MAX_PARTICLE_COUNT do
-       local tmp:[float] = [4:float];
-       local t = i as float * dt;
-       local s = math.sin(t);
-       local c = math.cos(t);
-       local ly = 1.0f - 2.0f* i as float / MAX_PARTICLE_COUNT as float;
-       local w = math.sqrt(1.0f - ly*ly);
-       tmp[0] = s * 100.0f * w + x;
-       tmp[1] = 100.0f - 200.0f * i as float/MAX_PARTICLE_COUNT as float + y;
-       tmp[2] = c * 100.0f * w + z;
-       tmp[3] = 1.0f;
+    let max_particle_count = MAX_PARTICLE_COUNT
+    local dt = 3.1415f * 2.0f * 16.0f /  max_particle_count as float
+    for i, particle in ps.particle_buf do
+        local t = i as float * dt
+        local s = math.sin(t)
+        local c = math.cos(t)
+        local ly = 1.0f - 2.0f* i as float / max_particle_count as float
+        local w = math.sqrt(1.0f - ly*ly)
 
-       local tmp2:[float] = matrix.multiply(mtx, tmp);
+        local tmp = vector.vec4(s * 100.0f * w + x,
+                                100.0f - 200.0f * i as float/max_particle_count as float + y,
+                                c * 100.0f * w + z,
+                                1.0f)
+        local tmp2 = matrix.multiply(mtx, tmp)
 
-       let target = ps.particle_buf[i].target
-       target.data[0] = tmp2[0];
-       target.data[1] = tmp2[1];
-       target.data[2] = tmp2[2];
+        particle.target = tmp2.vec3()
     end
 end
 
@@ -1312,9 +1303,10 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
     end
 end
 
-function fux_particle_speed( ps : ParticleSystem )
-    for i=0, MAX_PARTICLE_COUNT do
-        ps.particle_buf[i].speed = (random() * 0.6f + 0.4f) * 0.6f
+
+function fux_particle_speed(ps : ParticleSystem)
+    for particle in ps.particle_buf do
+        particle.speed = (random() * 0.6f + 0.4f) * 0.6f
     end
 end
 
@@ -1351,10 +1343,8 @@ function update_meshy_cube(ps : ParticleSystem, qb : QuadBatch, delta : float)
 
         local g = -0.9f * 10.0f
 
-        for i=0, MAX_PARTICLE_COUNT do
-            let particle = ps.particle_buf[i]
+        for particle in ps.particle_buf do
             particle.vel.data[1] = particle.vel.data[1] + g * delta
-
             particle.pos.data[0] = particle.pos.data[0] + particle.vel.data[0]
             particle.pos.data[1] = particle.pos.data[1] + particle.vel.data[1]
             particle.pos.data[2] = particle.pos.data[2] + particle.vel.data[2]
@@ -1363,8 +1353,7 @@ function update_meshy_cube(ps : ParticleSystem, qb : QuadBatch, delta : float)
 
     -- render!!!
     qb_begin(qb)
-    for i=0, MAX_PARTICLE_COUNT do
-        let particle = ps.particle_buf[i]
+    for particle in ps.particle_buf do
         let pos_z = particle.pos.data[2]
         let zzzz = vector.vec4(pos_z, pos_z, pos_z, pos_z)
         qb_add_3d(qb, particle.pos.data[0] - 5f, particle.pos.data[1] - 5f, particle.pos.data[0] + 5.0f, particle.pos.data[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzzz)
@@ -1375,7 +1364,7 @@ end
 
 --------------------------------------------------------------
 -- scenes??
-function run_particle_test(  )
+function run_particle_test()
 
     scene_particle_init()
 
@@ -1467,7 +1456,6 @@ function create_mesh( path : String ) : uint32
 
     -- return buffers[0]
     return vao[0]
-
 end
 
 
@@ -1623,8 +1611,8 @@ function run_floor()
         local delta = (glfwGetTime() - last_time_stamp) as float
         last_time_stamp = glfwGetTime()
 
-        local tm:[@WrapUInt64] = [1:@WrapUInt64];
-        FMOD_Channel_GetPosition(music_channel, tm, 1u64);
+        local tm:[@WrapUInt64] = [1:@WrapUInt64]
+        FMOD_Channel_GetPosition(music_channel, tm, 1u64)
 
         if tm[0].val > 12000u64 then
            to_water = to_water + (1.0f - to_water) * 3.0f * delta
@@ -1767,11 +1755,11 @@ function run_floor()
 
                 local i : int = 0
                 local amp = 30.0f
-                for i=0, MAX_PARTICLE_COUNT do
+                for particle in test_psys.particle_buf do
                     local a1 = random() * 3.14f * 2.0f
                     local a2 = random() * 3.14f * 2.0f
 
-                    let vel = test_psys.particle_buf[i].vel
+                    let vel = particle.vel
                     vel.data[0] = math.sin(a1) * amp
                     vel.data[1] = math.cos(a1) * amp
                     vel.data[2] = math.sin(a2) * amp
@@ -1808,8 +1796,8 @@ function run_floor()
         local px:int = (math.sin(2.0f*t)*64.0f) as int + 128;
         local py:int = (math.cos(3.0f*t)*64.0f) as int + 128;
 
-        for p=0, MAX_PARTICLE_COUNT do
-            let pos = test_psys.particle_buf[p].pos;
+        for particle in test_psys.particle_buf do
+            let pos = particle.pos;
             if (pos.data[1] < 0.0f) and (pos.data[1] > -5.0f) then
                 let x = (pos.data[0] + 256.0f) * 0.5f;
                 let y = pos.data[1];
