@@ -213,20 +213,18 @@ end
 
 function multiply(mtx: Matrix, vec: vector.Vector3): vector.Vector3
     local out = vector.Vector3{}
-    for k=0, 3 do
-        out.data[k] =
-            mtx.data[4*k+0] * vec.data[0] +
-            mtx.data[4*k+1] * vec.data[1] +
-            mtx.data[4*k+2] * vec.data[2]
-    end
+    out.x = mtx.data[4*0+0] * vec.x + mtx.data[4*0+1] * vec.y + mtx.data[4*0+2] * vec.z
+    out.y = mtx.data[4*1+0] * vec.x + mtx.data[4*1+1] * vec.y + mtx.data[4*1+2] * vec.z
+    out.z = mtx.data[4*2+0] * vec.x + mtx.data[4*2+1] * vec.y + mtx.data[4*2+2] * vec.z
     return out
 end
 
 
 function multiply(mtx: Matrix, vec: vector.Vector4): vector.Vector4
     local out = vector.Vector4{}
-    for k=0, 4 do
-        out.data[k] = mtx.data[4*k+0] * vec.data[0] + mtx.data[4*k+1] * vec.data[1] + mtx.data[4*k+2] * vec.data[2] + mtx.data[4*k+3] * vec.data[3];
-    end
+    out.x = mtx.data[4*0+0] * vec.x + mtx.data[4*0+1] * vec.y + mtx.data[4*0+2] * vec.z + mtx.data[4*0+3] * vec.w
+    out.y = mtx.data[4*1+0] * vec.x + mtx.data[4*1+1] * vec.y + mtx.data[4*1+2] * vec.z + mtx.data[4*1+3] * vec.w
+    out.z = mtx.data[4*2+0] * vec.x + mtx.data[4*2+1] * vec.y + mtx.data[4*2+2] * vec.z + mtx.data[4*2+3] * vec.w
+    out.w = mtx.data[4*3+0] * vec.x + mtx.data[4*3+1] * vec.y + mtx.data[4*3+2] * vec.z + mtx.data[4*3+3] * vec.w
     return out
 end

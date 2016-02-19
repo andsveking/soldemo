@@ -836,28 +836,28 @@ function qb_add_3d(qb: QuadBatch, x0: float, y0: float, x1: float, y1: float, u0
     -- vertices
     -- tri A: a,b,c
     qb.vert_buf[i+ 1] = y0
-    qb.vert_buf[i+ 2] = z.data[0]
+    qb.vert_buf[i+ 2] = z.x
     qb.vert_buf[i+ 0] = x0
 
     qb.vert_buf[i+ 4] = y0
-    qb.vert_buf[i+ 5] = z.data[1]
+    qb.vert_buf[i+ 5] = z.y
     qb.vert_buf[i+ 3] = x1
 
     qb.vert_buf[i+ 7] = y1
-    qb.vert_buf[i+ 8] = z.data[3]
+    qb.vert_buf[i+ 8] = z.w
     qb.vert_buf[i+ 6] = x1
 
     -- tri B: a,c,d
     qb.vert_buf[i+10] = y0
-    qb.vert_buf[i+11] = z.data[0]
+    qb.vert_buf[i+11] = z.x
     qb.vert_buf[i+9] = x0
 
     qb.vert_buf[i+13] = y1
-    qb.vert_buf[i+14] = z.data[3]
+    qb.vert_buf[i+14] = z.w
     qb.vert_buf[i+12] = x1
 
     qb.vert_buf[i+16] = y1
-    qb.vert_buf[i+17] = z.data[2]
+    qb.vert_buf[i+17] = z.z
     qb.vert_buf[i+15] = x0
 
     i = qb.cursor * 2 * 6
@@ -972,8 +972,8 @@ end
 
 
 -- ugly LUT
-local lut_u : [float] = [16*16:float]
-local lut_v : [float] = [16*16:float]
+local lut_u: [float] = [16*16:float]
+local lut_v: [float] = [16*16:float]
 function create_lut()
     local delta = 16.0f / 256.0f
 
@@ -992,6 +992,7 @@ function create_lut()
     end
 end
 
+
 function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float )
     local delta = 16.0f / 256.0f
     local i = 0
@@ -1009,6 +1010,7 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
     end
 
 end
+
 
 function qb_text_slam( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float, where2:float )
     local delta = 16.0f / 256.0f
@@ -1081,25 +1083,25 @@ function init_meshy_cube()
 
     for particle in test_psys.particle_buf do
         local a : float = random() * 3.14f * 2.0f
-        particle.pos.data[0] = math.cos(a) * 2048.0f
-        particle.pos.data[1] = math.sin(a) * 1048.0f + 1100.0f
-        particle.pos.data[2] = 2000.0f
+        particle.pos.x = math.cos(a) * 2048.0f
+        particle.pos.y = math.sin(a) * 1048.0f + 1100.0f
+        particle.pos.z = 2000.0f
         particle.speed = (random() * 0.6f + 0.4f) * 0.6f
     end
 end
 
 
 function gen_points_from_line(v0: vector.Vector3, v1: vector.Vector3, points_per_line: int, ps: ParticleSystem, fill_start : int)
-    local vec = vector.vec3(v1.data[0] - v0.data[0], v1.data[1] - v0.data[1], v1.data[2] - v0.data[2])
-    local step = vector.vec3(vec.data[0] / points_per_line as float,
-                             vec.data[1] / points_per_line as float,
-                             vec.data[2] / points_per_line as float)
+    local vec = vector.vec3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z)
+    local step = vector.vec3(vec.x / points_per_line as float,
+                             vec.y / points_per_line as float,
+                             vec.z / points_per_line as float)
 
     local d = 0.0f
     for i=fill_start, fill_start + points_per_line do
-        ps.particle_buf[i].target = vector.vec3(v0.data[0] + step.data[0] * d,
-                                                v0.data[1] + step.data[1] * d,
-                                                v0.data[2] + step.data[2] * d)
+        ps.particle_buf[i].target = vector.vec3(v0.x + step.x * d,
+                                                v0.y + step.y * d,
+                                                v0.z + step.z * d)
         d = d + 1.0f
     end
 end
@@ -1140,11 +1142,11 @@ function gen_pyramid_particles(x: float, y: float, z: float, w: float, h: float,
     let v3 = matrix.multiply(mtx, vector.vec4(-wh, -hh, -dh, 1.0f))
     let v4 = matrix.multiply(mtx, vector.vec4(0.0f, hh, 0.0f, 1.0f))
 
-    let v0 = vector.vec3(v0.data[0] + x, v0.data[1] + y, v0.data[2] + z)
-    let v1 = vector.vec3(v1.data[0] + x, v1.data[1] + y, v1.data[2] + z)
-    let v2 = vector.vec3(v2.data[0] + x, v2.data[1] + y, v2.data[2] + z)
-    let v3 = vector.vec3(v3.data[0] + x, v3.data[1] + y, v3.data[2] + z)
-    let v4 = vector.vec3(v4.data[0] + x, v4.data[1] + y, v4.data[2] + z)
+    let v0 = vector.vec3(v0.x + x, v0.y + y, v0.z + z)
+    let v1 = vector.vec3(v1.x + x, v1.y + y, v1.z + z)
+    let v2 = vector.vec3(v2.x + x, v2.y + y, v2.z + z)
+    let v3 = vector.vec3(v3.x + x, v3.y + y, v3.z + z)
+    let v4 = vector.vec3(v4.x + x, v4.y + y, v4.z + z)
 
     local lines = 8
     local points_per_line = MAX_PARTICLE_COUNT as float / lines as float
@@ -1177,14 +1179,14 @@ function gen_cube_particles(x: float, y: float, z: float, w: float, h: float, d:
     let v6 = matrix.multiply(mtx, vector.vec4(wh, hh, -dh, 1.0f))
     let v7 = matrix.multiply(mtx, vector.vec4(-wh, hh, -dh, 1.0f));
 
-    let v0 = vector.vec3(v0.data[0] + x, v0.data[1] + y, v0.data[2] + z)
-    let v1 = vector.vec3(v1.data[0] + x, v1.data[1] + y, v1.data[2] + z)
-    let v2 = vector.vec3(v2.data[0] + x, v2.data[1] + y, v2.data[2] + z)
-    let v3 = vector.vec3(v3.data[0] + x, v3.data[1] + y, v3.data[2] + z)
-    let v4 = vector.vec3(v4.data[0] + x, v4.data[1] + y, v4.data[2] + z)
-    let v5 = vector.vec3(v5.data[0] + x, v5.data[1] + y, v5.data[2] + z)
-    let v6 = vector.vec3(v6.data[0] + x, v6.data[1] + y, v6.data[2] + z)
-    let v7 = vector.vec3(v7.data[0] + x, v7.data[1] + y, v7.data[2] + z)
+    let v0 = vector.vec3(v0.x + x, v0.y + y, v0.z + z)
+    let v1 = vector.vec3(v1.x + x, v1.y + y, v1.z + z)
+    let v2 = vector.vec3(v2.x + x, v2.y + y, v2.z + z)
+    let v3 = vector.vec3(v3.x + x, v3.y + y, v3.z + z)
+    let v4 = vector.vec3(v4.x + x, v4.y + y, v4.z + z)
+    let v5 = vector.vec3(v5.x + x, v5.y + y, v5.z + z)
+    let v6 = vector.vec3(v6.x + x, v6.y + y, v6.z + z)
+    let v7 = vector.vec3(v7.x + x, v7.y + y, v7.z + z)
 
     local lines = 12
     local points_per_line = MAX_PARTICLE_COUNT as float / lines as float
@@ -1228,6 +1230,7 @@ function gen_sphere_particles( x: float, y: float, z: float, w: float, h: float,
     end
 end
 
+
 function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
     local lines:int = 0;
     local lp:int = 0;
@@ -1245,26 +1248,26 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
                     local u = vector.vec4()
                     local v = vector.vec4()
                     if a == 0 then
-                        u.data[0] = x as float
-                        u.data[1] = y as float
-                        u.data[2] = q as float
-                        v.data[0] = x as float
-                        v.data[1] = y as float
-                        v.data[2] = (q + 1) as float
+                        u.x = x as float
+                        u.y = y as float
+                        u.z = q as float
+                        v.x = x as float
+                        v.y = y as float
+                        v.z = (q + 1) as float
                     elseif a == 1 then
-                        u.data[0] = x as float
-                        u.data[1] = q as float
-                        u.data[2] = y as float
-                        v.data[0] = x as float
-                        v.data[1] = (q + 1) as float
-                        v.data[2] = y as float
+                        u.x = x as float
+                        u.y = q as float
+                        u.z = y as float
+                        v.x = x as float
+                        v.y = (q + 1) as float
+                        v.z = y as float
                     elseif a == 2 then
-                        u.data[0] = q as float
-                        u.data[1] = x as float
-                        u.data[2] = y as float
-                        v.data[0] = (q + 1) as float
-                        v.data[1] = x as float
-                        v.data[2] = y as float
+                        u.x = q as float
+                        u.y = x as float
+                        u.z = y as float
+                        v.x = (q + 1) as float
+                        v.y = x as float
+                        v.z = y as float
                     end
                     local corn = 0
                     if (x == 0 and y == 0) then
@@ -1281,12 +1284,15 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
                         if p == 0 then
                             lines = lines + 1
                         else
-                            u.data[3] = 1.0f
-                            v.data[3] = 1.0f
-                            for b=0, 3 do
-                                u.data[b] = (u.data[b] - 1.5f) * 50.0f
-                                v.data[b] = (v.data[b] - 1.5f) * 50.0f
-                            end
+                            u.x = (u.x - 1.5f) * 50.0f
+                            v.x = (v.x - 1.5f) * 50.0f
+                            u.y = (u.y - 1.5f) * 50.0f
+                            v.y = (v.y - 1.5f) * 50.0f
+                            u.z = (u.z - 1.5f) * 50.0f
+                            v.z = (v.z - 1.5f) * 50.0f
+                            u.w = (1.0f - 1.5f) * 50.0f
+                            v.w = (1.0f - 1.5f) * 50.0f
+
                             lines = lines - 1
                             if lines == 0 then
                                 gen_points_from_line(matrix.multiply(mtx, u).vec3(), matrix.multiply(mtx, v).vec3(), MAX_PARTICLE_COUNT - lp, ps, lp);
@@ -1326,17 +1332,17 @@ function update_meshy_cube(ps : ParticleSystem, qb : QuadBatch, delta : float)
     elseif ps.mode == PARTICLE_MODE_FOLLOW then
         for i=0, MAX_PARTICLE_COUNT do
             let particle = ps.particle_buf[i]
-            let tv_x = particle.speed*delta*(particle.target.data[0] - particle.pos.data[0])
-            let tv_y = particle.speed*delta*(particle.target.data[1] - particle.pos.data[1])
-            let tv_z = particle.speed*delta*(particle.target.data[2] - particle.pos.data[2])
+            let tv_x = particle.speed*delta*(particle.target.x - particle.pos.x)
+            let tv_y = particle.speed*delta*(particle.target.y - particle.pos.y)
+            let tv_z = particle.speed*delta*(particle.target.z - particle.pos.z)
 
             if (particle.speed < 0.6f) then
                 particle.speed = particle.speed*1.008f
             end
 
-            particle.pos.data[0] = particle.pos.data[0] + tv_x
-            particle.pos.data[1] = particle.pos.data[1] + tv_y
-            particle.pos.data[2] = particle.pos.data[2] + tv_z
+            particle.pos.x = particle.pos.x + tv_x
+            particle.pos.y = particle.pos.y + tv_y
+            particle.pos.z = particle.pos.z + tv_z
         end
 
     elseif (ps.mode == PARTICLE_MODE_EXPLODE) then
@@ -1344,19 +1350,19 @@ function update_meshy_cube(ps : ParticleSystem, qb : QuadBatch, delta : float)
         local g = -0.9f * 10.0f
 
         for particle in ps.particle_buf do
-            particle.vel.data[1] = particle.vel.data[1] + g * delta
-            particle.pos.data[0] = particle.pos.data[0] + particle.vel.data[0]
-            particle.pos.data[1] = particle.pos.data[1] + particle.vel.data[1]
-            particle.pos.data[2] = particle.pos.data[2] + particle.vel.data[2]
+            particle.vel.y = particle.vel.y + g * delta
+            particle.pos.x = particle.pos.x + particle.vel.x
+            particle.pos.y = particle.pos.y + particle.vel.y
+            particle.pos.z = particle.pos.z + particle.vel.z
         end
     end
 
     -- render!!!
     qb_begin(qb)
     for particle in ps.particle_buf do
-        let pos_z = particle.pos.data[2]
+        let pos_z = particle.pos.z
         let zzzz = vector.vec4(pos_z, pos_z, pos_z, pos_z)
-        qb_add_3d(qb, particle.pos.data[0] - 5f, particle.pos.data[1] - 5f, particle.pos.data[0] + 5.0f, particle.pos.data[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzzz)
+        qb_add_3d(qb, particle.pos.x - 5f, particle.pos.y - 5f, particle.pos.x + 5.0f, particle.pos.y + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzzz)
     end
     qb_end(qb)
 end
@@ -1597,7 +1603,6 @@ function run_floor()
     local to_logo:float = 0.0f;
     local logo_t:float = 0.0f;
 
-
     local psyk_t:float = 0.0f;
     local next_switch = 0u64;
 
@@ -1753,16 +1758,16 @@ function run_floor()
                 test_psys.cool_down = 3.0f
                 test_psys.next_mode = PARTICLE_MODE_FOLLOW
 
-                local i : int = 0
+                local i = 0
                 local amp = 30.0f
                 for particle in test_psys.particle_buf do
                     local a1 = random() * 3.14f * 2.0f
                     local a2 = random() * 3.14f * 2.0f
 
                     let vel = particle.vel
-                    vel.data[0] = math.sin(a1) * amp
-                    vel.data[1] = math.cos(a1) * amp
-                    vel.data[2] = math.sin(a2) * amp
+                    vel.x = math.sin(a1) * amp
+                    vel.y = math.cos(a1) * amp
+                    vel.z = math.sin(a2) * amp
                 end
             end
         end
@@ -1798,10 +1803,10 @@ function run_floor()
 
         for particle in test_psys.particle_buf do
             let pos = particle.pos;
-            if (pos.data[1] < 0.0f) and (pos.data[1] > -5.0f) then
-                let x = (pos.data[0] + 256.0f) * 0.5f;
-                let y = pos.data[1];
-                let z = (pos.data[2] + 256.0f) * 0.5f;
+            if (pos.y < 0.0f) and (pos.y > -5.0f) then
+                let x = (pos.x + 256.0f) * 0.5f;
+                let y = pos.y
+                let z = (pos.z + 256.0f) * 0.5f;
 
                 local PX = x as int
                 local PY = z as int
