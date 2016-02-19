@@ -996,7 +996,7 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
     local delta = 16.0f / 256.0f
     local i = 0
     local x = start_x
-    while (txt.byte_at(i) ~= 0u8) do
+    while txt.byte_at(i) ~= 0u8 do
         local u0 = lut_u[txt.byte_at(i)]
         local v0 = lut_v[txt.byte_at(i)]
         local u1 = u0 + delta
@@ -1011,11 +1011,10 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
 end
 
 function qb_text_slam( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float, where2:float )
-
     local delta = 16.0f / 256.0f
     local i = 0
     local x = start_x
-    while (txt.byte_at(i) ~= 0u8) do
+    while txt.byte_at(i) ~= 0u8 do
         local u0 = lut_u[txt.byte_at(i)]
         local v0 = lut_v[txt.byte_at(i)]
         local u1 = u0 + delta
@@ -1047,10 +1046,10 @@ end
 -- particle meshes????
 local MAX_PARTICLE_COUNT : int = 1024 * 2
 struct Particle
-    local pos : @[3:float]
-    local vel : @[3:float]
-    local target : @[3:float]
-    local speed : float
+    local pos: @vector.Vector3
+    local vel: @vector.Vector3
+    local target: @vector.Vector3
+    local speed: float
 end
 
 local PARTICLE_MODE_STATIC  : int = 0
@@ -1082,10 +1081,11 @@ function init_meshy_cube()
 
     for i=0, MAX_PARTICLE_COUNT do
         local a : float = random() * 3.14f * 2.0f
-        test_psys.particle_buf[i].pos[0] = math.cos(a) * 2048.0f
-        test_psys.particle_buf[i].pos[1] = math.sin(a) * 1048.0f + 1100.0f
-        test_psys.particle_buf[i].pos[2] = 2000.0f
-        test_psys.particle_buf[i].speed = (random() * 0.6f + 0.4f) * 0.6f
+        let particle = test_psys.particle_buf[i]
+        particle.pos.data[0] = math.cos(a) * 2048.0f
+        particle.pos.data[1] = math.sin(a) * 1048.0f + 1100.0f
+        particle.pos.data[2] = 2000.0f
+        particle.speed = (random() * 0.6f + 0.4f) * 0.6f
     end
 end
 
@@ -1102,10 +1102,10 @@ function gen_points_from_line(v0: vector.Vector3, v1: vector.Vector3, points_per
 
     local d = 0.0f
     for i=fill_start, fill_start + points_per_line do
-        ps.particle_buf[i].target[0] = v0.data[0] + step.data[0] * d
-        ps.particle_buf[i].target[1] = v0.data[1] + step.data[1] * d
-        ps.particle_buf[i].target[2] = v0.data[2] + step.data[2] * d
-
+        let target = ps.particle_buf[i].target
+        target.data[0] = v0.data[0] + step.data[0] * d
+        target.data[1] = v0.data[1] + step.data[1] * d
+        target.data[2] = v0.data[2] + step.data[2] * d
         d = d + 1.0f
     end
 end
@@ -1230,9 +1230,10 @@ function gen_sphere_particles( x: float, y: float, z: float, w: float, h: float,
 
        local tmp2:[float] = matrix.multiply(mtx, tmp);
 
-       ps.particle_buf[i].target[0] = tmp2[0];
-       ps.particle_buf[i].target[1] = tmp2[1];
-       ps.particle_buf[i].target[2] = tmp2[2];
+       let target = ps.particle_buf[i].target
+       target.data[0] = tmp2[0];
+       target.data[1] = tmp2[1];
+       target.data[2] = tmp2[2];
     end
 end
 
@@ -1291,11 +1292,9 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
                         else
                             u.data[3] = 1.0f
                             v.data[3] = 1.0f
-                            local b = 0
-                            while b < 3 do
+                            for b=0, 3 do
                                 u.data[b] = (u.data[b] - 1.5f) * 50.0f
                                 v.data[b] = (v.data[b] - 1.5f) * 50.0f
-                                b = b + 1
                             end
                             lines = lines - 1
                             if lines == 0 then
@@ -1314,69 +1313,63 @@ function gen_plusbox_particles(ps: ParticleSystem, mtx: matrix.Matrix)
 end
 
 function fux_particle_speed( ps : ParticleSystem )
-    local i : int = 0
-    while (i < MAX_PARTICLE_COUNT) do
+    for i=0, MAX_PARTICLE_COUNT do
         ps.particle_buf[i].speed = (random() * 0.6f + 0.4f) * 0.6f
-        i = i + 1
     end
-
 end
+
 
 function update_meshy_cube(ps : ParticleSystem, qb : QuadBatch, delta : float)
     if ps.cool_down > 0.0f then
         ps.cool_down = ps.cool_down - delta
-        if (ps.cool_down <= 0.0f) then
+        if ps.cool_down <= 0.0f then
             ps.cool_down = 0.0f
             ps.mode = ps.next_mode
         end
     end
 
     -- update particles depending on mode
-    if (ps.mode == PARTICLE_MODE_STATIC) then
+    if ps.mode == PARTICLE_MODE_STATIC then
         -- do nothing
-    elseif (ps.mode == PARTICLE_MODE_FOLLOW) then
-        local i : int = 0
-        while (i < MAX_PARTICLE_COUNT) do
-            let tv_x = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[0] - ps.particle_buf[i].pos[0])
-            let tv_y = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[1] - ps.particle_buf[i].pos[1])
-            let tv_z = ps.particle_buf[i].speed*delta*(ps.particle_buf[i].target[2] - ps.particle_buf[i].pos[2])
+    elseif ps.mode == PARTICLE_MODE_FOLLOW then
+        for i=0, MAX_PARTICLE_COUNT do
+            let particle = ps.particle_buf[i]
+            let tv_x = particle.speed*delta*(particle.target.data[0] - particle.pos.data[0])
+            let tv_y = particle.speed*delta*(particle.target.data[1] - particle.pos.data[1])
+            let tv_z = particle.speed*delta*(particle.target.data[2] - particle.pos.data[2])
 
-            if (ps.particle_buf[i].speed < 0.6f) then
-                ps.particle_buf[i].speed = ps.particle_buf[i].speed*1.008f
+            if (particle.speed < 0.6f) then
+                particle.speed = particle.speed*1.008f
             end
 
-            ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + tv_x
-            ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + tv_y
-            ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + tv_z
-
-            i += 1
+            particle.pos.data[0] = particle.pos.data[0] + tv_x
+            particle.pos.data[1] = particle.pos.data[1] + tv_y
+            particle.pos.data[2] = particle.pos.data[2] + tv_z
         end
 
     elseif (ps.mode == PARTICLE_MODE_EXPLODE) then
 
         local g = -0.9f * 10.0f
 
-        local i : int = 0
-        while (i < MAX_PARTICLE_COUNT) do
-            ps.particle_buf[i].vel[1] = ps.particle_buf[i].vel[1] + g * delta
+        for i=0, MAX_PARTICLE_COUNT do
+            let particle = ps.particle_buf[i]
+            particle.vel.data[1] = particle.vel.data[1] + g * delta
 
-            ps.particle_buf[i].pos[0] = ps.particle_buf[i].pos[0] + ps.particle_buf[i].vel[0]
-            ps.particle_buf[i].pos[1] = ps.particle_buf[i].pos[1] + ps.particle_buf[i].vel[1]
-            ps.particle_buf[i].pos[2] = ps.particle_buf[i].pos[2] + ps.particle_buf[i].vel[2]
-            i += 1
+            particle.pos.data[0] = particle.pos.data[0] + particle.vel.data[0]
+            particle.pos.data[1] = particle.pos.data[1] + particle.vel.data[1]
+            particle.pos.data[2] = particle.pos.data[2] + particle.vel.data[2]
         end
     end
 
     -- render!!!
     qb_begin(qb)
     for i=0, MAX_PARTICLE_COUNT do
-        let zzz = vector.vec4(ps.particle_buf[i].pos[2],
-                              ps.particle_buf[i].pos[2],
-                              ps.particle_buf[i].pos[2],
-                              ps.particle_buf[i].pos[2])
-        qb_add_3d(qb, ps.particle_buf[i].pos[0] - 5f, ps.particle_buf[i].pos[1] - 5f, ps.particle_buf[i].pos[0] + 5.0f, ps.particle_buf[i].pos[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzz)
+        let particle = ps.particle_buf[i]
+        let pos_z = particle.pos.data[2]
+        let zzzz = vector.vec4(pos_z, pos_z, pos_z, pos_z)
+        qb_add_3d(qb, particle.pos.data[0] - 5f, particle.pos.data[1] - 5f, particle.pos.data[0] + 5.0f, particle.pos.data[1] + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzzz)
     end
-    qb_end( qb )
+    qb_end(qb)
 end
 
 
@@ -1415,14 +1408,6 @@ local particle_qb : QuadBatch
 local particle_amount : int = 1024*10
 local particle_loc_mtx : int
 
--- struct Particle
---     local pos : @[3:float]
---     --local vel : @[3:float]
---     local target : @[3:float]
---     local speed : float
--- end
-
--- local particle_buf : [@Particle] = [particle_amount:@Particle]
 
 function scene_particle_init()
     local vertex_src : String = read_file_as_string("data/shaders/particle_3d.vp")
@@ -1457,8 +1442,7 @@ function scene_particle_draw(window : uint64, mtx : matrix.Matrix, delta : float
 
     glUseProgram(particle_shader)
     glUniformMatrix4fv(particle_loc_mtx, 1, true, mtx)
-    qb_render( particle_qb )
-
+    qb_render(particle_qb)
 end
 
 
@@ -1727,15 +1711,15 @@ function run_floor()
            move = 1.0f;
         end
 
-        local dip_mtx = matrix.trans(math.sin(psyk_t) * move * 200.0f, math.cos(psyk_t*3.0f) * 200.0f - 50.0f, math.cos(psyk_t*0.74f) * move * 200.0f);
-        rot_mtx = matrix.multiply(dip_mtx, rot_mtx);
+        local dip_mtx = matrix.trans(math.sin(psyk_t) * move * 200.0f, math.cos(psyk_t*3.0f) * 200.0f - 50.0f, math.cos(psyk_t*0.74f) * move * 200.0f)
+        rot_mtx = matrix.multiply(dip_mtx, rot_mtx)
 
         local for_logo = matrix.multiply(
             matrix.multiply(
                 matrix.trans(0f, 1.4f * elevate + 50.0f, 0f),
                 matrix.multiply(matrix.ident().rotate_X(-0.25f*3.1415f), matrix.ident().rotate_Y(0.25f*3.1415f))),
             matrix.ident().rotate_Z(0.0f));
-        rot_mtx = matrix.interp(rot_mtx, for_logo, to_logo);
+        rot_mtx = matrix.interp(rot_mtx, for_logo, to_logo)
 
         if logo_t > 0.0f then
             test_psys.figure = PARTICLE_FIGURE_PLUSBOX
@@ -1750,8 +1734,8 @@ function run_floor()
         end
 
         if water_t > 0.0f then
-            if (test_psys.mode == PARTICLE_MODE_STATIC) then
-                test_psys.mode = PARTICLE_MODE_FOLLOW;
+            if test_psys.mode == PARTICLE_MODE_STATIC then
+                test_psys.mode = PARTICLE_MODE_FOLLOW
             end
 
             if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
@@ -1768,17 +1752,15 @@ function run_floor()
                 if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
                     test_psys.figure = PARTICLE_FIGURE_SPHERE
                 elseif (test_psys.figure == PARTICLE_FIGURE_SPHERE) then
-                    --test_psys.figure = PARTICLE_FIGURE_PLUSBOX
-                --elseif (test_psys.figure == PARTICLE_FIGURE_PLUSBOX) then
                     test_psys.figure = PARTICLE_FIGURE_PYRAMID
                 else
                     test_psys.figure = PARTICLE_FIGURE_CUBE
                 end
 
-                fux_particle_speed( test_psys )
+                fux_particle_speed(test_psys)
             end
 
-            if (do_switch == 1 and psyk_t > 0.0f and test_psys.mode == PARTICLE_MODE_FOLLOW ) then
+            if do_switch == 1 and psyk_t > 0.0f and test_psys.mode == PARTICLE_MODE_FOLLOW then
                 test_psys.mode = PARTICLE_MODE_EXPLODE
                 test_psys.cool_down = 3.0f
                 test_psys.next_mode = PARTICLE_MODE_FOLLOW
@@ -1789,9 +1771,10 @@ function run_floor()
                     local a1 = random() * 3.14f * 2.0f
                     local a2 = random() * 3.14f * 2.0f
 
-                    test_psys.particle_buf[i].vel[0] = math.sin(a1) * amp
-                    test_psys.particle_buf[i].vel[1] = math.cos(a1) * amp
-                    test_psys.particle_buf[i].vel[2] = math.sin(a2) * amp
+                    let vel = test_psys.particle_buf[i].vel
+                    vel.data[0] = math.sin(a1) * amp
+                    vel.data[1] = math.cos(a1) * amp
+                    vel.data[2] = math.sin(a2) * amp
                 end
             end
         end
@@ -1818,7 +1801,7 @@ function run_floor()
         glUseProgram(particle_shader)
         scene_particle_draw(window, camera, 0.1f)
 
-        if (glfwGetMouseButton(window, 0) == 1) then
+        if glfwGetMouseButton(window, 0) == 1 then
             test_psys.mode = PARTICLE_MODE_STATIC
         end
 
@@ -1826,11 +1809,11 @@ function run_floor()
         local py:int = (math.cos(3.0f*t)*64.0f) as int + 128;
 
         for p=0, MAX_PARTICLE_COUNT do
-            local pos:[3:float] = test_psys.particle_buf[p].pos;
-            if (pos[1] < 0.0f) and (pos[1] > -5.0f) then
-                local x = (pos[0] + 256.0f) * 0.5f;
-                local z = (pos[2] + 256.0f) * 0.5f;
-                local y = pos[1];
+            let pos = test_psys.particle_buf[p].pos;
+            if (pos.data[1] < 0.0f) and (pos.data[1] > -5.0f) then
+                let x = (pos.data[0] + 256.0f) * 0.5f;
+                let y = pos.data[1];
+                let z = (pos.data[2] + 256.0f) * 0.5f;
 
                 local PX = x as int
                 local PY = z as int
@@ -1866,8 +1849,6 @@ function run_floor()
             pandown = 0.0f
         end
         pandown = pandown * pandown * 500.0f;
-        if (pandown > 1000.0f) then
-        end
 
         local t1 = 4.0f * t;
         qb_text_slam(text_qb, 75.0f, 500.0f + pandown, "DEFOLD CREW", 128.0f, 64.0f, t1)
