@@ -26,6 +26,7 @@ function main(args:[String]): int
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow( 800, 600, "sol", 0u64, 0u64)
+    glfwMakeContextCurrent( window )
 
     if (window ~= 0u64) then
         glfwShowWindow( window )
@@ -42,14 +43,14 @@ function main(args:[String]): int
 
         local shader = create_shader( vertex_src, fragment_src )
         local quad = create_quad()
-        local qb : QuadBatch = create_quad_batch( 1024 )
+        local qb : QuadBatch = create_quad_batch(1024)
         qb_begin(qb)
         qb_text(qb, 0.0f, 220.0f, line1, 16.0f, 12.0f)
         qb_text(qb, 100.0f, 160.0f, line2, 32.0f, 24.0f)
         qb_text(qb, 0.0f, 80.0f, line1, 16.0f, 12.0f)
         qb_end( qb )
 
-        local alt_text : QuadBatch = create_quad_batch( 1024 )
+        local alt_text : QuadBatch = create_quad_batch(1024)
         qb_begin(alt_text)
         qb_text(alt_text, 160.0f-16.0f*5.5f , 5.0f, "DEFOLD CREW", 32.0f, 16.0f)
         qb_end(alt_text)
@@ -143,6 +144,7 @@ end
 -- GLFW
 !nogc extern glfwInit():int
 !nogc extern glfwCreateWindow(  width : int, height : int, title:String, monitor : uint64, share : uint64 ) : uint64
+!nogc extern glfwMakeContextCurrent( window : uint64 )
 !nogc extern glfwShowWindow( window : uint64 )
 !nogc extern glfwTerminate()
 !nogc extern glfwSwapBuffers( window : uint64 )
@@ -186,8 +188,9 @@ end
 !nogc extern glUniformMatrix4fv( location : int, count : int, transpose : bool, value: matrix.Matrix)
 
 -- OGL: Geometry
-!nogc extern glGenBuffers( n : int, buffers : [uint32] )
-!nogc extern glGenVertexArrays( n : int, buffers : [uint32] )
+!symbol("glGenBuffers") !nogc extern glGenBuffers1(n : int, buffers : {uint32} )
+!symbol("glGenBuffers") !nogc extern glGenBuffers2(n : int, buffers : {uint32, uint32})
+!nogc extern glGenVertexArrays(n : int, buffers : {uint32})
 !nogc extern glBindBuffer( target: uint32, buffer : uint32 )
 !nogc extern glBindVertexArray( array : uint32 )
 !nogc extern glBufferData( target : uint32, size : int, data : [float], usage : uint32)
@@ -196,14 +199,14 @@ end
 !nogc extern glDrawArrays( mode : uint32, first : uint32, count : int )
 !nogc extern glEnableVertexAttribArray( index : int )
 !nogc extern glDisableVertexAttribArray( index : int )
-!nogc extern glVertexAttribPointer( index : uint32, size : int, type : uint32, normalized : bool, stride : int, pointer : int )
+!nogc extern glVertexAttribPointer( index : uint32, size : int, typ : uint32, normalized : bool, stride : int, pointer : int )
 
 -- OGL: Textures
 !nogc extern glGenTextures( n : int, textures : [uint32] )
 !nogc extern glBindTexture( target : uint32, texture : uint32)
-!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : uint32) -- for empty textures
-!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [byte])
-!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, type : uint32, data : [float])
+!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, typ : uint32, data : uint32) -- for empty textures
+!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, typ : uint32, data : [byte])
+!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, typ : uint32, data : [float])
 !nogc extern glTexParameteri( target : uint32, pname : uint32, param : uint32 )
 
 -- OGL: FBO
@@ -223,7 +226,7 @@ end
 !nogc extern FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
 !nogc extern FMOD_System_CreateSound(system : uint64, path : String, mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
 !nogc extern FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
-!nogc extern FMOD_Channel_GetPosition(channelid : uint64, ms : [@WrapUInt64], timeunit : uint64);
+!nogc extern FMOD_Channel_GetPosition(channelid : uint64, ms : {uint64}, timeunit : uint64);
 
 -- C Std funcs
 !nogc extern fopen( filename: String, mode: String) : uint64
@@ -434,7 +437,7 @@ local FMOD_VIRTUAL_PLAYFROMSTART     : uint64 = 0x80000000u64
 
 ------------------------------------------------------------------------
 -- Helpers
-function ERROR_LUT( id : uint32 ) : String
+function error_lut(id : uint32) : String
     if (id == 0u32) then
         return "GL_NO_ERROR"
     elseif (id == 0x0500u32) then
@@ -448,7 +451,7 @@ function ERROR_LUT( id : uint32 ) : String
     return "unknown"
 end
 
-function log_error( id : String )
+function log_error(id : String)
     io.println( "[ \x1B[31m!!\x1B[0m ] " .. id )
 end
 
@@ -460,20 +463,20 @@ function random() : float
     return rng.next_float()
 end
 
-function check_error( id : String, print_on_ok : bool ) : bool
+function check_error(id : String, print_on_ok : bool) : bool
     local err = glGetError()
-    if ( err ~= 0u32 ) then
-        log_error( id .. " - Error: " .. ERROR_LUT(err) )
+    if err ~= 0u32 then
+        log_error(id .. " - Error: " .. error_lut(err))
         return false
     end
 
-    if (print_on_ok) then
+    if print_on_ok then
         log_ok(id)
     end
     return true
 end
 
-function shader_log( obj : uint32 )
+function shader_log(obj : uint32)
     local size:[int] = [200:int]
     if glIsShader(obj) then
         glGetShaderiv( obj, GL_INFO_LOG_LENGTH, size )
@@ -495,7 +498,7 @@ function shader_log( obj : uint32 )
     io.println("Shader log:\n" .. string(data) )
 end
 
-function read_file( file_path : String ) : [byte]
+function read_file(file_path : String) : [byte]
     local f = fopen(file_path, "r")
 
     if (f ~= 0u64) then
@@ -620,52 +623,26 @@ function render_to_fbo( fbo : uint32 )
     end
 end
 
--- function create_mesh_from_file( path : String ) : uint32
 
---     local raw_data : [byte] = read_file( path )
-
---     io.println(#raw_data)
-
---     -- generate gl buffers
---     local buffers : [uint32] = [1:uint32]
---     glGenBuffers(1, buffers)
---     local vert_gl = buffers[0]
-
---     local vao : [uint32] = [1:uint32]
---     glGenVertexArrays( 1, vao )
---     local vao_obj = vao[0]
-
---     glBindVertexArray(vao_obj)
---     glEnableVertexAttribArray( 0 )
---     glBindBuffer( GL_ARRAY_BUFFER, vert_gl )
---     glBufferData( GL_ARRAY_BUFFER, #raw_data, raw_data, GL_STATIC_DRAW )
---     glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
---     glBindVertexArray(0u32)
-
---     return vao_obj
-
--- end
-
-
-function create_quad_batch( capacity : int ) : QuadBatch
-    local qb : QuadBatch = QuadBatch { vert_gl  = 0u32,
-                                       uv_gl    = 0u32,
-                                       vert_buf = [capacity*3*6: float],
-                                       uv_buf   = [capacity*2*6: float],
-                                       capacity = capacity,
-                                       cursor   = 0 }
+function create_quad_batch(capacity : int ) : QuadBatch
+    local qb = QuadBatch { vert_gl  = 0u32,
+                           uv_gl    = 0u32,
+                           vert_buf = [capacity*3*6: float],
+                           uv_buf   = [capacity*2*6: float],
+                           capacity = capacity,
+                           cursor   = 0 }
 
     -- generate gl buffers
-    local buffers : [uint32] = [2:uint32]
-    glGenBuffers(2, buffers)
-    qb.vert_gl = buffers[0]
-    qb.uv_gl   = buffers[1]
+    local buffers = {0u32, 0u32}
+    glGenBuffers2(2, buffers)
+    qb.vert_gl = buffers.0
+    qb.uv_gl   = buffers.1
 
-    local vao : [uint32] = [1:uint32]
+    local vao = {0u32}
     glGenVertexArrays( 1, vao )
-    qb.vao = vao[0]
+    qb.vao = vao.0
 
-    glBindVertexArray(qb.vao)
+    glBindVertexArray(vao.0)
     glEnableVertexAttribArray( 0 )
     glBindBuffer(GL_ARRAY_BUFFER, qb.vert_gl )
     glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
@@ -775,12 +752,12 @@ end
 
 
 function qb_write_cube_side(qb : QuadBatch, where_pos:int, where_uv:int, x:float, y:float, z:float, ux:float, uy:float, uz:float, vx:float, vy:float, vz:float, u:float, v:float)
-    qb_write(qb, where_pos + 0, x - ux - vx, y - uy - vy, z - uz - vz);
-    qb_write(qb, where_pos + 3, x + ux - vx, y + uy - vy, z + uz - vz);
-    qb_write(qb, where_pos + 6, x + ux + vx, y + uy + vy, z + uz + vz);
-    qb_write(qb, where_pos + 9, x - ux - vx, y - uy - vy, z - uz - vz);
-    qb_write(qb, where_pos + 12, x + ux + vx, y + uy + vy, z + uz + vz);
-    qb_write(qb, where_pos + 15, x - ux + vx, y - uy + vy, z - uz + vz);
+    qb_write(qb, where_pos + 0, x - ux - vx, y - uy - vy, z - uz - vz)
+    qb_write(qb, where_pos + 3, x + ux - vx, y + uy - vy, z + uz - vz)
+    qb_write(qb, where_pos + 6, x + ux + vx, y + uy + vy, z + uz + vz)
+    qb_write(qb, where_pos + 9, x - ux - vx, y - uy - vy, z - uz - vz)
+    qb_write(qb, where_pos + 12, x + ux + vx, y + uy + vy, z + uz + vz)
+    qb_write(qb, where_pos + 15, x - ux + vx, y - uy + vy, z - uz + vz)
     for col=0, 6 do
         qb.uv_buf[where_uv + 2*col + 0] = u
         qb.uv_buf[where_uv + 2*col + 1] = v
@@ -789,12 +766,12 @@ end
 
 function qb_write_cube(qb : QuadBatch, x:float, y:float, z:float)
     local szf = 0.50f
-    qb_write_cube_side(qb, 3*6*(qb.cursor+0), 2*6*(qb.cursor+0), x + 0.0f, y + 0.0f, z - szf, szf, 0.0f, 0.0f, 0.0f, szf, 0.0f, 1f, 0f);
-    qb_write_cube_side(qb, 3*6*(qb.cursor+1), 2*6*(qb.cursor+1), x + 0.0f, y + 0.0f, z + szf,-szf, 0.0f, 0.0f, 0.0f,-szf, 0.0f, 1f, 0f);
-    qb_write_cube_side(qb, 3*6*(qb.cursor+2), 2*6*(qb.cursor+2), x + szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f, szf, 0.0f, szf, 0.0f, 0f, 1f);
-    qb_write_cube_side(qb, 3*6*(qb.cursor+3), 2*6*(qb.cursor+3), x - szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f,-szf, 0.0f, szf, 0.0f, 0f, 1f);
-    qb_write_cube_side(qb, 3*6*(qb.cursor+4), 2*6*(qb.cursor+4), x + 0.0f, y + szf, z + 0.0f, szf, 0.0f, 0.0f, 0.0f, 0.0f, szf, 0f, 0f);
-    qb_write_cube_side(qb, 3*6*(qb.cursor+5), 2*6*(qb.cursor+5), x + 0.0f, y - szf, z + 0.0f,-szf, 0.0f, 0.0f, 0.0f, 0.0f,-szf, 0f, 0f);
+    qb_write_cube_side(qb, 3*6*(qb.cursor+0), 2*6*(qb.cursor+0), x + 0.0f, y + 0.0f, z - szf, szf, 0.0f, 0.0f, 0.0f, szf, 0.0f, 1f, 0f)
+    qb_write_cube_side(qb, 3*6*(qb.cursor+1), 2*6*(qb.cursor+1), x + 0.0f, y + 0.0f, z + szf,-szf, 0.0f, 0.0f, 0.0f,-szf, 0.0f, 1f, 0f)
+    qb_write_cube_side(qb, 3*6*(qb.cursor+2), 2*6*(qb.cursor+2), x + szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f, szf, 0.0f, szf, 0.0f, 0f, 1f)
+    qb_write_cube_side(qb, 3*6*(qb.cursor+3), 2*6*(qb.cursor+3), x - szf, y + 0.0f, z + 0.0f, 0.0f, 0.0f,-szf, 0.0f, szf, 0.0f, 0f, 1f)
+    qb_write_cube_side(qb, 3*6*(qb.cursor+4), 2*6*(qb.cursor+4), x + 0.0f, y + szf, z + 0.0f, szf, 0.0f, 0.0f, 0.0f, 0.0f, szf, 0f, 0f)
+    qb_write_cube_side(qb, 3*6*(qb.cursor+5), 2*6*(qb.cursor+5), x + 0.0f, y - szf, z + 0.0f,-szf, 0.0f, 0.0f, 0.0f, 0.0f,-szf, 0f, 0f)
     qb.cursor = qb.cursor + 6;
 end
 
@@ -834,7 +811,7 @@ function qb_add_3d(qb: QuadBatch, x0: float, y0: float, x1: float, y1: float, u0
 --   | / |
 --   a - b
 
-    local i : int = qb.cursor*3*6 -- (x,y) * vert_count * triangle_count_per_quad
+    let i : int = qb.cursor*3*6 -- (x,y) * vert_count * triangle_count_per_quad
 
     -- vertices
     -- tri A: a,b,c
@@ -863,7 +840,7 @@ function qb_add_3d(qb: QuadBatch, x0: float, y0: float, x1: float, y1: float, u0
     qb.vert_buf[i+17] = z.z
     qb.vert_buf[i+15] = x0
 
-    i = qb.cursor * 2 * 6
+    let i = qb.cursor * 2 * 6
     -- uv0
     -- tri A: a,b,c
     qb.uv_buf[i+ 0] = u0
@@ -889,7 +866,7 @@ function qb_add_3d(qb: QuadBatch, x0: float, y0: float, x1: float, y1: float, u0
 
 end
 
-function qb_add_centered( qb : QuadBatch, x : float, y : float, w : float, h : float, u0 : float, v0 : float, u1 : float, v1 : float )
+function qb_add_centered(qb : QuadBatch, x : float, y : float, w : float, h : float, u0 : float, v0 : float, u1 : float, v1 : float)
 
     local wh = w / 2.0f
     local hh = h / 2.0f
@@ -899,10 +876,10 @@ end
 
 
 function create_quad() : uint32
-    local buffers : [uint32] = [1:uint32]
-    glGenBuffers( 1, buffers )
+    local buffers = {0u32}
+    glGenBuffers1( 1, buffers )
     check_error("creating geo buffers", true)
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[0])
+    glBindBuffer(GL_ARRAY_BUFFER, buffers.0)
     check_error("binding geo buffers", true)
 
     local data : [float] = [12:float]
@@ -927,15 +904,15 @@ function create_quad() : uint32
     glBufferData( GL_ARRAY_BUFFER, 6*2*4, data, GL_STATIC_DRAW )
     check_error( "loading geo buffers", true )
 
-    local vao : [uint32] = [1:uint32]
+    local vao = {0u32}
     glGenVertexArrays( 1, vao );
-    glBindVertexArray(vao[0]);
+    glBindVertexArray(vao.0);
 
     glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
+    glBindBuffer( GL_ARRAY_BUFFER, buffers.0 )
     glVertexAttribPointer(0u32, 2, GL_FLOAT, false, 0, 0);
 
-    return vao[0]
+    return vao.0
 end
 
 
@@ -1402,7 +1379,7 @@ end
 local particle_shader : uint32
 local mesh_shader : uint32
 local particle_qb : QuadBatch
-local particle_amount : int = 1024*10
+let particle_amount : int = MAX_PARTICLE_COUNT
 local particle_loc_mtx : int
 
 
@@ -1415,7 +1392,7 @@ function scene_particle_init()
     particle_loc_mtx = glGetUniformLocation( particle_shader, "mtx")
     check_error("(particle) getting locations", false)
 
-    particle_qb = create_quad_batch( particle_amount )
+    particle_qb = create_quad_batch(particle_amount)
 
     init_meshy_cube()
 end
@@ -1426,6 +1403,7 @@ function scene_particle_draw(window : uint64, mtx : matrix.Matrix, delta : float
     local width: [int] = [1:int]
     local height: [int] = [1:int]
     glfwGetFramebufferSize(window, width, height)
+
     local widthf = width[0] as float
     local heightf = height[0] as float
 
@@ -1444,9 +1422,9 @@ end
 
 
 function create_mesh( path : String ) : uint32
-    local buffers : [uint32] = [1:uint32]
-    glGenBuffers( 1, buffers )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
+    local buffers = {0u32}
+    glGenBuffers1( 1, buffers )
+    glBindBuffer( GL_ARRAY_BUFFER, buffers.0 )
 
     local data : [byte] = read_file( path )
     io.println(#data)
@@ -1454,32 +1432,17 @@ function create_mesh( path : String ) : uint32
     glBufferData( GL_ARRAY_BUFFER, #data, data, GL_STATIC_DRAW )
     check_error( "loading mesh geo buffers", true )
 
-    local vao : [uint32] = [1:uint32]
+    local vao = {0u32}
     glGenVertexArrays( 1, vao );
-    glBindVertexArray(vao[0]);
+    glBindVertexArray(vao.0);
 
     glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers[0] )
+    glBindBuffer( GL_ARRAY_BUFFER, buffers.0 )
     glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0);
 
-    -- return buffers[0]
-    return vao[0]
+    return vao.0
 end
 
-
-function unused_render( window : uint64, delta : double )
-    local width  : [int] = [1:int]
-    local height : [int] = [1:int]
-    glfwGetFramebufferSize( window, width, height )
-
-    glViewport(0,0,width[0],height[0])
-    glClearColor(0.2f, 0.2f, 0.2f, 1.0f)
-    glClear( GL_COLOR_BUFFER_BIT )
-    glEnable( GL_BLEND )
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable( GL_DEPTH_TEST )
-    glDisable( GL_CULL_FACE )
-end
 
 function loop_begin():bool
     return glfwWindowShouldClose( window ) <= 0
@@ -1523,10 +1486,9 @@ function floor_sim(src: int, dst: int)
 
     for u=1, floorsize-1 do
         for v=1, floorsize-1 do
-            local idx = 256 * u + v;
-
-            local f = c2 * (s[idx-1] + s[idx+1] + s[idx-floorsize] + s[idx+floorsize] - 4.0f * s[idx]);
-            local vel = (s[idx] - d[idx])/dt + f * dt;
+            let idx = 256 * u + v;
+            let f = c2 * (s[idx-1] + s[idx+1] + s[idx-floorsize] + s[idx+floorsize] - 4.0f * s[idx]);
+            let vel = (s[idx] - d[idx])/dt + f * dt;
             d[idx] = 0.98f * (s[idx] + vel * dt);
         end
     end
@@ -1565,7 +1527,7 @@ function run_floor()
     fragment_src  = read_file_as_string("data/shaders/shader.fp")
     local text_shader = create_shader( vertex_src, fragment_src )
     check_error("(text) create shader", false);
-    local text_qb : QuadBatch = create_quad_batch( 1024 )
+    local text_qb : QuadBatch = create_quad_batch(1024)
     local text_shader = create_shader( vertex_src, fragment_src )
     check_error("(particle) create shader", false)
 
@@ -1618,24 +1580,25 @@ function run_floor()
         local delta = (glfwGetTime() - last_time_stamp) as float
         last_time_stamp = glfwGetTime()
 
-        local tm:[@WrapUInt64] = [1:@WrapUInt64]
+        let tm = {0u64}
         FMOD_Channel_GetPosition(music_channel, tm, 1u64)
+        let tm = tm.0
 
-        if tm[0].val > 12000u64 then
+        if tm > 12000u64 then
            to_water = to_water + (1.0f - to_water) * 3.0f * delta
            if to_water > 1.0f then
               to_water = 1.0f
            end
         end
 
-        if tm[0].val > 42000u64 then
+        if tm > 42000u64 then
            to_logo = to_logo + (1.0f - to_logo) * 3.0f * delta
            if to_logo > 1.0f then
               to_logo = 1.0f
            end
         end
 
-        if tm[0].val > 25500u64 then
+        if tm > 25500u64 then
            if psyk_t == 0.0f then
               next_switch = 0u64;
            end
@@ -1647,11 +1610,11 @@ function run_floor()
         end
 
         local do_switch = 0
-        if tm[0].val > next_switch and math.cos(psyk_t*3.0f) > 0.8f then
+        if tm > next_switch and math.cos(psyk_t*3.0f) > 0.8f then
             if psyk_t > 0.0f then
-                next_switch = tm[0].val + 6000u64
+                next_switch = tm + 6000u64
             else
-                next_switch = tm[0].val + 3000u64
+                next_switch = tm + 3000u64
             end
             do_switch = 1
         end
@@ -1733,20 +1696,20 @@ function run_floor()
                 test_psys.mode = PARTICLE_MODE_FOLLOW
             end
 
-            if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
+            if test_psys.figure == PARTICLE_FIGURE_CUBE then
                 gen_cube_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx)
-            elseif ( test_psys.figure == PARTICLE_FIGURE_SPHERE) then
+            elseif test_psys.figure == PARTICLE_FIGURE_SPHERE then
                 gen_sphere_particles(0.0f, 0.0f, 10.0f, 80.0f, 80.0f, 80.0f, test_psys, rot_mtx)
-            elseif ( test_psys.figure == PARTICLE_FIGURE_PYRAMID) then
+            elseif test_psys.figure == PARTICLE_FIGURE_PYRAMID then
                 gen_pyramid_particles(0.0f, 0.0f, 10.0f, 100.0f, 100.0f, 100.0f, test_psys, rot_mtx)
             else
                 gen_plusbox_particles(test_psys, rot_mtx)
             end
 
             if do_switch == 1 then
-                if (test_psys.figure == PARTICLE_FIGURE_CUBE) then
+                if test_psys.figure == PARTICLE_FIGURE_CUBE then
                     test_psys.figure = PARTICLE_FIGURE_SPHERE
-                elseif (test_psys.figure == PARTICLE_FIGURE_SPHERE) then
+                elseif test_psys.figure == PARTICLE_FIGURE_SPHERE then
                     test_psys.figure = PARTICLE_FIGURE_PYRAMID
                 else
                     test_psys.figure = PARTICLE_FIGURE_CUBE
@@ -1804,13 +1767,13 @@ function run_floor()
 
         for particle in test_psys.particle_buf do
             let pos = particle.pos;
-            if (pos.y < 0.0f) and (pos.y > -5.0f) then
+            if pos.y < 0.0f and pos.y > -5.0f then
                 let x = (pos.x + 256.0f) * 0.5f;
                 let y = pos.y
                 let z = (pos.z + 256.0f) * 0.5f;
 
-                local PX = x as int
-                local PY = z as int
+                let PX = x as int
+                let PY = z as int
                 if PX > 0 and PX < 255 and PY > 0 and PY < 255 then
                     floordata[cur].heights[PY*256+PX] = -15.0f;
                 end

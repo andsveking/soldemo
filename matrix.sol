@@ -12,22 +12,22 @@ struct Matrix
         local c = math.cos(angle);
         local R = Matrix{}
 
-        R.data[0] = 1.f
-        R.data[1] = 0.f
-        R.data[2] = 0.f
-        R.data[3] = 0.f
-        R.data[4] = 0.f
+        R.data[0] = 1.0f
+        R.data[1] = 0.0f
+        R.data[2] = 0.0f
+        R.data[3] = 0.0f
+        R.data[4] = 0.0f
         R.data[5] = c
         R.data[6] = s
-        R.data[7] = 0.f
-        R.data[8] = 0.f
+        R.data[7] = 0.0f
+        R.data[8] = 0.0f
         R.data[9] = -s
         R.data[10] = c
-        R.data[11] = 0.f
-        R.data[12] = 0.f
-        R.data[13] = 0.f
-        R.data[14] = 0.f
-        R.data[15] = 1.f
+        R.data[11] = 0.0f
+        R.data[12] = 0.0f
+        R.data[13] = 0.0f
+        R.data[14] = 0.0f
+        R.data[15] = 1.0f
 
         return multiply(R, self)
     end
@@ -38,21 +38,21 @@ struct Matrix
         local R =  Matrix{}
 
         R.data[0] = c
-        R.data[1] = 0.f
+        R.data[1] = 0.0f
         R.data[2] = s
-        R.data[3] = 0.f
-        R.data[4] = 0.f
-        R.data[5] = 1.f
-        R.data[6] = 0.f
-        R.data[7] = 0.f
+        R.data[3] = 0.0f
+        R.data[4] = 0.0f
+        R.data[5] = 1.0f
+        R.data[6] = 0.0f
+        R.data[7] = 0.0f
         R.data[8] = -s
-        R.data[9] = 0.f
+        R.data[9] = 0.0f
         R.data[10] = c
-        R.data[11] = 0.f
-        R.data[12] = 0.f
-        R.data[13] = 0.f
-        R.data[14] = 0.f
-        R.data[15] = 1.f
+        R.data[11] = 0.0f
+        R.data[12] = 0.0f
+        R.data[13] = 0.0f
+        R.data[14] = 0.0f
+        R.data[15] = 1.0f
 
         return multiply(R, self)
     end
@@ -64,20 +64,20 @@ struct Matrix
 
         R.data[0] = c
         R.data[1] = s
-        R.data[2] = 0.f
-        R.data[3] = 0.f
+        R.data[2] = 0.0f
+        R.data[3] = 0.0f
         R.data[4] = -s
         R.data[5] = c
-        R.data[6] = 0.f
-        R.data[7] = 0.f
-        R.data[8] = 0.f
-        R.data[9] = 0.f
-        R.data[10] = 1.f
-        R.data[11] = 0.f
-        R.data[12] = 0.f
-        R.data[13] = 0.f
-        R.data[14] = 0.f
-        R.data[15] = 1.f
+        R.data[6] = 0.0f
+        R.data[7] = 0.0f
+        R.data[8] = 0.0f
+        R.data[9] = 0.0f
+        R.data[10] = 1.0f
+        R.data[11] = 0.0f
+        R.data[12] = 0.0f
+        R.data[13] = 0.0f
+        R.data[14] = 0.0f
+        R.data[15] = 1.0f
 
         return multiply(R, self)
     end
