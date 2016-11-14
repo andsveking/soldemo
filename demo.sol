@@ -14,7 +14,7 @@ function main(args:[String]): int
     rng.seed(0u32)
     create_lut()
 
-    if (glfwInit() == 0) then
+    if glfwInit() == 0 then
         return -1
     end
 
@@ -25,30 +25,30 @@ function main(args:[String]): int
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = glfwCreateWindow( 800, 600, "sol", 0u64, 0u64)
-    glfwMakeContextCurrent( window )
+    window = glfwCreateWindow(800, 600, "sol", 0u64, 0u64)
+    glfwMakeContextCurrent(window)
 
     if (window ~= 0u64) then
         glfwShowWindow( window )
 
         -- init audio and load sound
         local sound_system = init_audio()
-        local drum_sound = load_sound( sound_system, "data/music/skadad.mp3" )
-        music_channel = play_sound( sound_system, drum_sound )
+        local drum_sound = load_sound(sound_system, "data/music/skadad.mp3")
+        music_channel = play_sound(sound_system, drum_sound)
 
         local vertex_src : String = read_file_as_string("data/shaders/shader.vp")
         -- io.println("vertex_src: " .. vertex_src)
         local fragment_src : String = read_file_as_string("data/shaders/shader.fp")
         -- io.println("fragment_src: " .. fragment_src)
 
-        local shader = create_shader( vertex_src, fragment_src )
+        local shader = create_shader(vertex_src, fragment_src)
         local quad = create_quad()
         local qb : QuadBatch = create_quad_batch(1024)
         qb_begin(qb)
         qb_text(qb, 0.0f, 220.0f, line1, 16.0f, 12.0f)
         qb_text(qb, 100.0f, 160.0f, line2, 32.0f, 24.0f)
         qb_text(qb, 0.0f, 80.0f, line1, 16.0f, 12.0f)
-        qb_end( qb )
+        qb_end(qb)
 
         local alt_text : QuadBatch = create_quad_batch(1024)
         qb_begin(alt_text)
@@ -56,7 +56,7 @@ function main(args:[String]): int
         qb_end(alt_text)
 
         -- setup()
-        local tex0_data : [byte] = read_file( "data/textures/consolefont.raw" )
+        local tex0_data : [byte] = read_file("data/textures/consolefont.raw")
         local tex0 = create_texture(256, 256, tex0_data)
 
         local anim = 0.0f
@@ -81,12 +81,8 @@ end
 ------------------------------------------------------------------
 -- Structs
 
-struct WrapPointer
-    local ptr : uint64
-end
-
-struct WrapUInt64
-    local val : uint64
+struct Wrap<T>
+    local value: T
 end
 
 struct QuadBatch
@@ -154,7 +150,7 @@ end
 !nogc extern glfwWindowHint( target : uint32, hint : uint32 )
 
 !nogc extern glfwGetMouseButton(window : uint64, button : int ) : int
-!nogc extern glfwGetFramebufferSize(window : uint64, width : [int], height : [int] )
+!nogc extern glfwGetFramebufferSize(window : uint64, width : Wrap<int>, height : Wrap<int> )
 !nogc extern glfwGetWindowSize(window : uint64, width : [int], height : [int] )
 !nogc extern glfwGetTime() : double
 
@@ -168,7 +164,7 @@ end
 !nogc extern glBlendFunc( sfactor : uint32, dfactor : uint32 )
 
 -- OGL: Shaders
-!nogc extern glCreateShader( shaderType : uint32 ) : uint32
+!nogc extern glCreateShader(shaderType : uint32) : uint32
 !nogc extern glCreateProgram() : uint32
 -- !nogc !nogc extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : [uint32] )
 !nogc extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : uint32 )
@@ -188,9 +184,9 @@ end
 !nogc extern glUniformMatrix4fv( location : int, count : int, transpose : bool, value: matrix.Matrix)
 
 -- OGL: Geometry
-!symbol("glGenBuffers") !nogc extern glGenBuffers1(n : int, buffers : {uint32} )
-!symbol("glGenBuffers") !nogc extern glGenBuffers2(n : int, buffers : {uint32, uint32})
-!nogc extern glGenVertexArrays(n : int, buffers : {uint32})
+!nogc extern glGenBuffers(n : int, buffers : Wrap<uint32>)
+!nogc extern glGenBuffers(n : int, buffers : Wrap<@{uint32, uint32}>)
+!nogc extern glGenVertexArrays(n : int, buffers : Wrap<uint32>)
 !nogc extern glBindBuffer( target: uint32, buffer : uint32 )
 !nogc extern glBindVertexArray( array : uint32 )
 !nogc extern glBufferData( target : uint32, size : int, data : [float], usage : uint32)
@@ -222,11 +218,11 @@ end
 
 
 -- FMOD: Core
-!nogc extern FMOD_System_Create(system : [@WrapPointer]) : uint64
+!nogc extern FMOD_System_Create(system : Wrap<uint64>) : uint64
 !nogc extern FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
-!nogc extern FMOD_System_CreateSound(system : uint64, path : String, mode : uint64, exinfo : uint64, sound : [@WrapPointer]) : uint64
-!nogc extern FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : [@WrapPointer]) : uint64
-!nogc extern FMOD_Channel_GetPosition(channelid : uint64, ms : {uint64}, timeunit : uint64);
+!nogc extern FMOD_System_CreateSound(system : uint64, path : String, mode : uint64, exinfo : uint64, sound : Wrap<uint64>) : uint64
+!nogc extern FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : Wrap<uint64>) : uint64
+!nogc extern FMOD_Channel_GetPosition(channelid : uint64, ms : Wrap<uint64>, timeunit : uint64);
 
 -- C Std funcs
 !nogc extern fopen( filename: String, mode: String) : uint64
@@ -633,16 +629,16 @@ function create_quad_batch(capacity : int ) : QuadBatch
                            cursor   = 0 }
 
     -- generate gl buffers
-    local buffers = {0u32, 0u32}
-    glGenBuffers2(2, buffers)
-    qb.vert_gl = buffers.0
-    qb.uv_gl   = buffers.1
+    local buffers = Wrap<@{uint32, uint32}>{{0u32, 0u32}}
+    glGenBuffers(2, buffers)
+    qb.vert_gl = buffers.value.0
+    qb.uv_gl   = buffers.value.1
 
-    local vao = {0u32}
-    glGenVertexArrays( 1, vao )
-    qb.vao = vao.0
+    local vao = Wrap<uint32>{}
+    glGenVertexArrays(1, vao)
+    qb.vao = vao.value
 
-    glBindVertexArray(vao.0)
+    glBindVertexArray(vao.value)
     glEnableVertexAttribArray( 0 )
     glBindBuffer(GL_ARRAY_BUFFER, qb.vert_gl )
     glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
@@ -876,13 +872,13 @@ end
 
 
 function create_quad() : uint32
-    local buffers = {0u32}
-    glGenBuffers1( 1, buffers )
+    local buffers = Wrap<uint32>{}
+    glGenBuffers(1, buffers)
     check_error("creating geo buffers", true)
-    glBindBuffer(GL_ARRAY_BUFFER, buffers.0)
+    glBindBuffer(GL_ARRAY_BUFFER, buffers.value)
     check_error("binding geo buffers", true)
 
-    local data : [float] = [12:float]
+    local data = [12:float]
     data[0] = -1.0f
     data[1] = -1.0f
 
@@ -901,18 +897,18 @@ function create_quad() : uint32
     data[10] = -1.0f
     data[11] =  1.0f
 
-    glBufferData( GL_ARRAY_BUFFER, 6*2*4, data, GL_STATIC_DRAW )
-    check_error( "loading geo buffers", true )
+    glBufferData(GL_ARRAY_BUFFER, 6*2*4, data, GL_STATIC_DRAW )
+    check_error("loading geo buffers", true)
 
-    local vao = {0u32}
-    glGenVertexArrays( 1, vao );
-    glBindVertexArray(vao.0);
+    local vao = Wrap<uint32>{}
+    glGenVertexArrays(1, vao);
+    glBindVertexArray(vao.value);
 
     glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers.0 )
+    glBindBuffer( GL_ARRAY_BUFFER, buffers.value )
     glVertexAttribPointer(0u32, 2, GL_FLOAT, false, 0, 0);
 
-    return vao.0
+    return vao.value
 end
 
 
@@ -1356,14 +1352,14 @@ function run_particle_test()
     local last_time_stamp = glfwGetTime()
 
     while loop_begin() do
-        local width  : [int] = [1:int]
-        local height : [int] = [1:int]
+        let width = Wrap<int>{}
+        let height = Wrap<int>{}
 
         glfwGetFramebufferSize( window, width, height )
-        local widthf = width[0] as float
-        local heightf = height[0] as float
+        let widthf = width.value as float
+        let heightf = height.value as float
 
-        glViewport(0,0,width[0],height[0])
+        glViewport(0,0,width.value,height.value)
         glClearColor(1.0f, 0.2f, 0.2f, 1.0f)
         glClear( 0x4100u32 )
         glDisable( GL_BLEND )
@@ -1400,12 +1396,11 @@ end
 
 function scene_particle_draw(window : uint64, mtx : matrix.Matrix, delta : float)
     -- TODO fix allocation
-    local width: [int] = [1:int]
-    local height: [int] = [1:int]
+    local width = Wrap<int>{}
+    local height = Wrap<int>{}
     glfwGetFramebufferSize(window, width, height)
-
-    local widthf = width[0] as float
-    local heightf = height[0] as float
+    local widthf = width.value as float
+    local heightf = height.value as float
 
     local deltaf = delta
 
@@ -1422,9 +1417,9 @@ end
 
 
 function create_mesh( path : String ) : uint32
-    local buffers = {0u32}
-    glGenBuffers1( 1, buffers )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers.0 )
+    local buffers = Wrap<uint32>{}
+    glGenBuffers(1, buffers)
+    glBindBuffer(GL_ARRAY_BUFFER, buffers.value)
 
     local data : [byte] = read_file( path )
     io.println(#data)
@@ -1432,15 +1427,15 @@ function create_mesh( path : String ) : uint32
     glBufferData( GL_ARRAY_BUFFER, #data, data, GL_STATIC_DRAW )
     check_error( "loading mesh geo buffers", true )
 
-    local vao = {0u32}
+    local vao = Wrap<uint32>{}
     glGenVertexArrays( 1, vao );
-    glBindVertexArray(vao.0);
+    glBindVertexArray(vao.value);
 
     glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers.0 )
+    glBindBuffer( GL_ARRAY_BUFFER, buffers.value )
     glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0);
 
-    return vao.0
+    return vao.value
 end
 
 
@@ -1498,11 +1493,11 @@ end
 function run_floor()
     scene_particle_init()
 
-    local width = [1:int]
-    local height = [1:int]
+    let width = Wrap<int>{}
+    let height = Wrap<int>{}
     glfwGetFramebufferSize(window, width, height)
-    local widthf = width[0] as float
-    local heightf = height[0] as float
+    let widthf = width.value as float
+    let heightf = height.value as float
 
     local fb : QuadBatch = create_quad_batch(1024*1024)
 
@@ -1574,15 +1569,15 @@ function run_floor()
 
     while loop_begin() do
         glfwGetFramebufferSize(window, width, height)
-        widthf = width[0] as float
-        heightf = height[0] as float
+        let widthf = width.value as float
+        let heightf = height.value as float
 
         local delta = (glfwGetTime() - last_time_stamp) as float
         last_time_stamp = glfwGetTime()
 
-        let tm = {0u64}
+        let tm = Wrap<uint64>{}
         FMOD_Channel_GetPosition(music_channel, tm, 1u64)
-        let tm = tm.0
+        let tm = tm.value
 
         if tm > 12000u64 then
            to_water = to_water + (1.0f - to_water) * 3.0f * delta
@@ -1622,7 +1617,7 @@ function run_floor()
         water_t = to_water * delta + water_t;
         logo_t = to_logo * delta + logo_t;
 
-        glViewport(0, 0, width[0], height[0])
+        glViewport(0, 0, width.value, height.value)
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
         glClear(0x4100u32)
         glDisable(GL_BLEND)
@@ -1840,12 +1835,12 @@ function run_floor()
 end
 
 function init_audio() : uint64
-    local system_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
-    if (FMOD_System_Create(system_ptr_wrap) ~= FMOD_OK) then
+    let system_ptr_wrap = Wrap<uint64>{}
+    if FMOD_System_Create(system_ptr_wrap) ~= FMOD_OK then
         log_error("could not create FMOD system")
         return 0u64
     end
-    local fmod_system = system_ptr_wrap[0].ptr
+    let fmod_system = system_ptr_wrap.value
 
     if (FMOD_System_Init(fmod_system, 32, 0u64, 0u64) ~= FMOD_OK) then
         log_error("could not init FMOD")
@@ -1860,7 +1855,7 @@ end
 
 
 function load_sound( fmod_system : uint64, path : String ) : uint64
-    local sound_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
+    local sound_ptr_wrap = Wrap<uint64>{}
     local res : uint64 = FMOD_System_CreateSound( fmod_system, path, 0x40u64, 0u64, sound_ptr_wrap)
 
     if (res ~= FMOD_OK) then
@@ -1870,20 +1865,20 @@ function load_sound( fmod_system : uint64, path : String ) : uint64
         return 0u64
     end
 
-    local sound_ptr = sound_ptr_wrap[0].ptr
+    local sound_ptr = sound_ptr_wrap.value
 
     return sound_ptr
 end
 
 function play_sound(fmod_system : uint64, fmod_sound : uint64) : uint64
-    local channel_ptr_wrap : [@WrapPointer] = [1:@WrapPointer]
-    local res : uint64 = FMOD_System_PlaySound( fmod_system, -1, fmod_sound, false, channel_ptr_wrap)
-    if (res ~= FMOD_OK) then
+    local channel_ptr_wrap = Wrap<uint64>{}
+    local res : uint64 = FMOD_System_PlaySound(fmod_system, -1, fmod_sound, false, channel_ptr_wrap)
+    if res ~= FMOD_OK then
         log_error("could not play sound: ")
         --        io.println(res)
         -- log_error("(" .. path .. ") could not create sound: " .. FMOD_ErrorString(res))
     end
-    return channel_ptr_wrap[0].ptr;
+    return channel_ptr_wrap.value;
 end
 
 local line1: String = "SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL"
