@@ -4,6 +4,8 @@ require io
 require math
 require rnd
 
+require glfw
+
 require matrix
 require vector
 
@@ -14,22 +16,22 @@ function main(args:[String]): int
     rng.seed(0u32)
     create_lut()
 
-    if glfwInit() == 0 then
+    if glfw.init() == 0 then
         return -1
     end
 
     -- get a ogl >= 3.2 context on OSX
     -- lets us use layout(location = x)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3u32);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2u32);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3u32)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 2u32)
+    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
+    glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
-    window = glfwCreateWindow(800, 600, "sol", 0u64, 0u64)
-    glfwMakeContextCurrent(window)
+    window = glfw.create_window(800, 600, "sol", 0u64, 0u64)
+    window.make_context_current()
 
-    if (window ~= 0u64) then
-        glfwShowWindow( window )
+    if (window.is_valid()) then
+        window.show()
 
         -- init audio and load sound
         local sound_system = init_audio()
@@ -60,7 +62,7 @@ function main(args:[String]): int
         local tex0 = create_texture(256, 256, tex0_data)
 
         local anim = 0.0f
-        local last_time_stamp = glfwGetTime()
+        local last_time_stamp = glfw.get_time()
 
         -- init scenes
         -- scene_particle_init()
@@ -71,7 +73,7 @@ function main(args:[String]): int
     end
 
     -- release scenes
-    glfwTerminate()
+    glfw.terminate()
     io.println("glfw terminated!")
 
     return 0
@@ -136,23 +138,6 @@ end
 
 ------------------------------------------------------------------
 -- External APIs
-
--- GLFW
-!nogc extern glfwInit():int
-!nogc extern glfwCreateWindow(  width : int, height : int, title:String, monitor : uint64, share : uint64 ) : uint64
-!nogc extern glfwMakeContextCurrent( window : uint64 )
-!nogc extern glfwShowWindow( window : uint64 )
-!nogc extern glfwTerminate()
-!nogc extern glfwSwapBuffers( window : uint64 )
-!nogc extern glfwPollEvents()
-!nogc extern glfwWindowShouldClose( window : uint64 ) : int
-!nogc extern glfwSetWindowShouldClose( window : uint64, x: int )
-!nogc extern glfwWindowHint( target : uint32, hint : uint32 )
-
-!nogc extern glfwGetMouseButton(window : uint64, button : int ) : int
-!nogc extern glfwGetFramebufferSize(window : uint64, width : Wrap<int>, height : Wrap<int> )
-!nogc extern glfwGetWindowSize(window : uint64, width : [int], height : [int] )
-!nogc extern glfwGetTime() : double
 
 -- OpenGL
 !nogc extern glGetError() : uint32
@@ -235,11 +220,6 @@ end
 
 -----------------------------------------------------------------------
 -- Defines/enums
-local GLFW_CONTEXT_VERSION_MAJOR : uint32 = 0x00022002u32
-local GLFW_CONTEXT_VERSION_MINOR : uint32 = 0x00022003u32
-local GLFW_OPENGL_FORWARD_COMPAT : uint32 = 0x00022006u32
-local GLFW_OPENGL_PROFILE        : uint32 = 0x00022008u32
-local GLFW_OPENGL_CORE_PROFILE   : uint32 = 0x00032001u32
 
 local GL_FALSE : uint32 = 0x0u32
 local GL_TRUE  : uint32 = 0x1u32
@@ -299,7 +279,7 @@ local SEEK_END            : int = 2
 local RAND_MAX            : int = 2147483647
 
 --
-local window : uint64
+local window: glfw.Window
 
 local FMOD_OK             : uint64 = 0u64
 local FMOD_ERR_ALREADYLOCKED : uint64          = 1u64
@@ -1349,25 +1329,22 @@ function run_particle_test()
 
     scene_particle_init()
 
-    local last_time_stamp = glfwGetTime()
+    local last_time_stamp = glfw.get_time()
 
     while loop_begin() do
-        let width = Wrap<int>{}
-        let height = Wrap<int>{}
+        let width, height = window.get_framebuffer_size()
+        let widthf = width as float
+        let heightf = height as float
 
-        glfwGetFramebufferSize( window, width, height )
-        let widthf = width.value as float
-        let heightf = height.value as float
-
-        glViewport(0,0,width.value,height.value)
+        glViewport(0, 0, width, height)
         glClearColor(1.0f, 0.2f, 0.2f, 1.0f)
         glClear( 0x4100u32 )
         glDisable( GL_BLEND )
         glEnable( GL_DEPTH_TEST )
         glDisable( GL_CULL_FACE )
 
-        local delta = glfwGetTime() - last_time_stamp
-        last_time_stamp = glfwGetTime()
+        local delta = glfw.get_time() - last_time_stamp
+        last_time_stamp = glfw.get_time()
         loop_end()
     end
 end
@@ -1394,13 +1371,11 @@ function scene_particle_init()
 end
 
 
-function scene_particle_draw(window : uint64, mtx : matrix.Matrix, delta : float)
+function scene_particle_draw(window: glfw.Window, mtx: matrix.Matrix, delta: float)
     -- TODO fix allocation
-    local width = Wrap<int>{}
-    local height = Wrap<int>{}
-    glfwGetFramebufferSize(window, width, height)
-    local widthf = width.value as float
-    local heightf = height.value as float
+    let width, height = window.get_framebuffer_size()
+    local widthf = width as float
+    local heightf = height as float
 
     local deltaf = delta
 
@@ -1439,13 +1414,13 @@ function create_mesh( path : String ) : uint32
 end
 
 
-function loop_begin():bool
-    return glfwWindowShouldClose( window ) <= 0
+function loop_begin(): bool
+    return window.window_should_close()
 end
 
 function loop_end()
-    glfwSwapBuffers(window)
-    glfwPollEvents()
+    window.swap_buffers()
+    glfw.poll_events()
 end
 
 local floorsize:int = 256
@@ -1493,11 +1468,9 @@ end
 function run_floor()
     scene_particle_init()
 
-    let width = Wrap<int>{}
-    let height = Wrap<int>{}
-    glfwGetFramebufferSize(window, width, height)
-    let widthf = width.value as float
-    let heightf = height.value as float
+    let width, height = window.get_framebuffer_size()
+    let widthf = width as float
+    let heightf = height as float
 
     local fb : QuadBatch = create_quad_batch(1024*1024)
 
@@ -1554,8 +1527,8 @@ function run_floor()
     local cur = 1
     local anim = 0.0f
 
-    local last_time_stamp = glfwGetTime();
-    local start_time = glfwGetTime();
+    local last_time_stamp = glfw.get_time();
+    local start_time = last_time_stamp
     local to_water:float = 0.0f;
     local water_t:float = 0.0f;
 
@@ -1568,12 +1541,12 @@ function run_floor()
     local texdata: [float] = [65536:float]
 
     while loop_begin() do
-        glfwGetFramebufferSize(window, width, height)
-        let widthf = width.value as float
-        let heightf = height.value as float
+        let width, height = window.get_framebuffer_size()
+        let widthf = width as float
+        let heightf = height as float
 
-        local delta = (glfwGetTime() - last_time_stamp) as float
-        last_time_stamp = glfwGetTime()
+        local delta = (glfw.get_time() - last_time_stamp) as float
+        last_time_stamp = glfw.get_time()
 
         let tm = Wrap<uint64>{}
         FMOD_Channel_GetPosition(music_channel, tm, 1u64)
@@ -1617,7 +1590,7 @@ function run_floor()
         water_t = to_water * delta + water_t;
         logo_t = to_logo * delta + logo_t;
 
-        glViewport(0, 0, width.value, height.value)
+        glViewport(0, 0, width, height)
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
         glClear(0x4100u32)
         glDisable(GL_BLEND)
@@ -1753,7 +1726,7 @@ function run_floor()
         glUseProgram(particle_shader)
         scene_particle_draw(window, camera, 0.1f)
 
-        if glfwGetMouseButton(window, 0) == 1 then
+        if window.get_mouse_button(0) == 1 then
             test_psys.mode = PARTICLE_MODE_STATIC
         end
 
