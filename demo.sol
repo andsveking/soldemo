@@ -146,7 +146,7 @@ end
 !nogc extern glfwSwapBuffers( window : uint64 )
 !nogc extern glfwPollEvents()
 !nogc extern glfwWindowShouldClose( window : uint64 ) : int
-!nogc extern glfwSetWindowShouldClose( window : uint64, int )
+!nogc extern glfwSetWindowShouldClose( window : uint64, x: int )
 !nogc extern glfwWindowHint( target : uint32, hint : uint32 )
 
 !nogc extern glfwGetMouseButton(window : uint64, button : int ) : int
@@ -1451,7 +1451,7 @@ end
 local floorsize:int = 256
 
 struct HF
-    heights : @[65536:float];
+    heights : @[float:65536];
 end
 
 local floordata:[@HF] = [2:@HF];

@@ -5,7 +5,7 @@ require vector
 
 
 struct Matrix
-    data: @[16:float]
+    data: @[float: 16]
 
     fn rotate_X(angle: float): Matrix
         local s = math.sin(angle);
