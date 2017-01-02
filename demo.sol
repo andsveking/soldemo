@@ -5,6 +5,8 @@ require math
 require rnd
 
 require glfw
+require gl
+require fmod
 
 require matrix
 require vector
@@ -24,13 +26,13 @@ function main(args:[String]): int
     -- lets us use layout(location = x)
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3u32)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 2u32)
-    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
+    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
     glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
     window = glfw.create_window(800, 600, "sol", 0u64, 0u64)
     window.make_context_current()
 
-    if (window.is_valid()) then
+    if window.is_valid() then
         window.show()
 
         -- init audio and load sound
@@ -99,178 +101,21 @@ struct QuadBatch
     local vao     : uint32
 end
 
-struct FMOD_CREATESOUNDEXINFO
-    local cbsize : int;             -- [w] Size of this structure.  This is used so the structure can be expanded in the future and still work on older versions of FMOD Ex. */
-    local length : uint32;             -- [w] Optional. Specify 0 to ignore. Size in bytes of file to load, or sound to create (in this case only if FMOD_OPENUSER is used).  Required if loading from memory.  If 0 is specified, then it will use the size of the file (unless loading from memory then an error will be returned). */
-    local fileoffset : uint32;         -- [w] Optional. Specify 0 to ignore. Offset from start of the file to start loading from.  This is useful for loading files from inside big data files. */
-    local numchannels : int;        -- [w] Optional. Specify 0 to ignore. Number of channels in a sound mandatory if FMOD_OPENUSER or FMOD_OPENRAW is used. */
-    local defaultfrequency : int;   -- [w] Optional. Specify 0 to ignore. Default frequency of sound in a sound mandatory if FMOD_OPENUSER or FMOD_OPENRAW is used.  Other formats use the frequency determined by the file format. */
-    local format : uint64;             -- [w] Optional. Specify 0 or FMOD_SOUND_FORMAT_NONE to ignore. Format of the sound mandatory if FMOD_OPENUSER or FMOD_OPENRAW is used.  Other formats use the format determined by the file format.   */
-    local decodebuffersize : uint32;   -- [w] Optional. Specify 0 to ignore. For streams.  This determines the size of the double buffer (in PCM samples) that a stream uses.  Use this for user created streams if you want to determine the size of the callback buffer passed to you.  Specify 0 to use FMOD's default size which is currently equivalent to 400ms of the sound format created/loaded. */
-    local initialsubsound : int;    -- [w] Optional. Specify 0 to ignore. In a multi-sample file format such as .FSB/.DLS/.SF2, specify the initial subsound to seek to, only if FMOD_CREATESTREAM is used. */
-    local numsubsounds : int;       -- [w] Optional. Specify 0 to ignore or have no subsounds.  In a sound created with FMOD_OPENUSER, specify the number of subsounds that are accessable with Sound::getSubSound.  If not created with FMOD_OPENUSER, this will limit the number of subsounds loaded within a multi-subsound file.  If using FSB, then if FMOD_CREATESOUNDEXINFO::inclusionlist is used, this will shuffle subsounds down so that there are not any gaps.  It will mean that the indices of the sounds will be different. */
-    local inclusionlist : uint32;      -- [w] Optional. Specify 0 to ignore. In a multi-sample format such as .FSB/.DLS/.SF2 it may be desirable to specify only a subset of sounds to be loaded out of the whole file.  This is an array of subsound indices to load into memory when created. */
-    local inclusionlistnum : int;   -- [w] Optional. Specify 0 to ignore. This is the number of integers contained within the inclusionlist array. */
-    local pcmreadcallback : uint64;    -- [w] Optional. Specify 0 to ignore. Callback to 'piggyback' on FMOD's read functions and accept or even write PCM data while FMOD is opening the sound.  Used for user sounds created with FMOD_OPENUSER or for capturing decoded data as FMOD reads it. */
-    local pcmsetposcallback : uint64;  -- [w] Optional. Specify 0 to ignore. Callback for when the user calls a seeking function such as Channel::setTime or Channel::setPosition within a multi-sample sound, and for when it is opened.*/
-    local nonblockcallback : uint64;   -- [w] Optional. Specify 0 to ignore. Callback for successful completion, or error while loading a sound that used the FMOD_NONBLOCKING flag.  Also called duing seeking, when setPosition is called or a stream is restarted. */
-    local dlsname : String;            -- [w] Optional. Specify 0 to ignore. Filename for a DLS or SF2 sample set when loading a MIDI file. If not specified, on Windows it will attempt to open /windows/system32/drivers/gm.dls or /windows/system32/drivers/etc/gm.dls, on Mac it will attempt to load /System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls, otherwise the MIDI will fail to open. Current DLS support is for level 1 of the specification. */
-    local encryptionkey : String;      -- [w] Optional. Specify 0 to ignore. Key for encrypted FSB file.  Without this key an encrypted FSB file will not load. */
-    local maxpolyphony : int;       -- [w] Optional. Specify 0 to ignore. For sequenced formats with dynamic channel allocation such as .MID and .IT, this specifies the maximum voice count allowed while playing.  .IT defaults to 64.  .MID defaults to 32. */
-    local userdata : uint64;           -- [w] Optional. Specify 0 to ignore. This is user data to be attached to the sound during creation.  Access via Sound::getUserData.  Note: This is not passed to FMOD_FILE_OPENCALLBACK, that is a different userdata that is file specific. */
-    local suggestedsoundtype : uint64; -- [w] Optional. Specify 0 or FMOD_SOUND_TYPE_UNKNOWN to ignore.  Instead of scanning all codec types, use this to speed up loading by making it jump straight to this codec. */
-    local useropen : uint64;           -- [w] Optional. Specify 0 to ignore. Callback for opening this file. */
-    local userclose : uint64;          -- [w] Optional. Specify 0 to ignore. Callback for closing this file. */
-    local userread : uint64;           -- [w] Optional. Specify 0 to ignore. Callback for reading from this file. */
-    local userseek : uint64;           -- [w] Optional. Specify 0 to ignore. Callback for seeking within this file. */
-    local userasyncread : uint64;      -- [w] Optional. Specify 0 to ignore. Callback for seeking within this file. */
-    local userasynccancel : uint64;    -- [w] Optional. Specify 0 to ignore. Callback for seeking within this file. */
-    local speakermap : uint64;         -- [w] Optional. Specify 0 to ignore. Use this to differ the way fmod maps multichannel sounds to speakers.  See FMOD_SPEAKERMAPTYPE for more. */
-    local initialsoundgroup : uint64;  -- [w] Optional. Specify 0 to ignore. Specify a sound group if required, to put sound in as it is created. */
-    local initialseekposition : uint32;-- [w] Optional. Specify 0 to ignore. For streams. Specify an initial position to seek the stream to. */
-    local initialseekpostype : uint64; -- [w] Optional. Specify 0 to ignore. For streams. Specify the time unit for the position set in initialseekposition. */
-    local ignoresetfilesystem : int;-- [w] Optional. Specify 0 to ignore. Set to 1 to use fmod's built in file system. Ignores setFileSystem callbacks and also FMOD_CREATESOUNEXINFO file callbacks.  Useful for specific cases where you don't want to use your own file system but want to use fmod's file system (ie net streaming). */
-    local cddaforceaspi : int;      -- [w] Optional. Specify 0 to ignore. For CDDA sounds only - if non-zero use ASPI instead of NTSCSI to access the specified CD/DVD device. */
-    local audioqueuepolicy : uint32;   -- [w] Optional. Specify 0 or FMOD_AUDIOQUEUE_CODECPOLICY_DEFAULT to ignore. Policy used to determine whether hardware or software is used for decoding, see FMOD_AUDIOQUEUE_CODECPOLICY for options (iOS >= 3.0 required, otherwise only hardware is available) */
-    local minmidigranularity : uint32; -- [w] Optional. Specify 0 to ignore. Allows you to set a minimum desired MIDI mixer granularity. Values smaller than 512 give greater than default accuracy at the cost of more CPU and vice versa. Specify 0 for default (512 samples). */
-    local nonblockthreadid : int;   -- [w] Optional. Specify 0 to ignore. Specifies a thread index to execute non blocking load on.  Allows for up to 5 threads to be used for loading at once.  This is to avoid one load blocking another.  Maximum value = 4. */
-end
 
 ------------------------------------------------------------------
 -- External APIs
 
--- OpenGL
-!nogc extern glGetError() : uint32
-!nogc extern glViewport( x : int, y : int, width : int, height : int )
-!nogc extern glClear( mask : uint32 )
-!nogc extern glClearColor( red : float, green : float, blue : float, alpha : float )
-!nogc extern glEnable( cap : uint32 )
-!nogc extern glDisable( cap : uint32 )
-!nogc extern glBlendFunc( sfactor : uint32, dfactor : uint32 )
-
--- OGL: Shaders
-!nogc extern glCreateShader(shaderType : uint32) : uint32
-!nogc extern glCreateProgram() : uint32
--- !nogc !nogc extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : [uint32] )
-!nogc extern glShaderSource( shader : uint32, count : uint64, lines : [String], length : uint32 )
-!nogc extern glCompileShader( shader : uint32 )
-!nogc extern glAttachShader( program : uint32, shader : uint32 )
-!nogc extern glLinkProgram( program : uint32 )
-!nogc extern glUseProgram( program : uint32 )
-!nogc extern glIsShader( obj : uint32 ) : bool
-!nogc extern glGetShaderiv( shader : uint32, pname : uint32, params : [int])
-!nogc extern glGetProgramiv( shader : uint32, pname : uint32, params : [int])
-!nogc extern glGetShaderInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
-!nogc extern glGetProgramInfoLog( shader : uint32, maxLength : int, length : [int], infoLog : [byte])
-!nogc extern glGetUniformLocation( program : uint32, name : String) : int
-!nogc extern glUniform4fv( location : int, count : int, value : [float] )
-!nogc extern glUniform1f( location : int, v0 : float )
-!nogc extern glUniform1i( location : int, v0 : int )
-!nogc extern glUniformMatrix4fv( location : int, count : int, transpose : bool, value: matrix.Matrix)
-
--- OGL: Geometry
-!nogc extern glGenBuffers(n : int, buffers : Wrap<uint32>)
-!nogc extern glGenBuffers(n : int, buffers : Wrap<@{uint32, uint32}>)
-!nogc extern glGenVertexArrays(n : int, buffers : Wrap<uint32>)
-!nogc extern glBindBuffer( target: uint32, buffer : uint32 )
-!nogc extern glBindVertexArray( array : uint32 )
-!nogc extern glBufferData( target : uint32, size : int, data : [float], usage : uint32)
-!nogc extern glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
--- !nogc extern glBufferData( target : uint32, size : int, data : [byte], usage : uint32)
-!nogc extern glDrawArrays( mode : uint32, first : uint32, count : int )
-!nogc extern glEnableVertexAttribArray( index : int )
-!nogc extern glDisableVertexAttribArray( index : int )
-!nogc extern glVertexAttribPointer( index : uint32, size : int, typ : uint32, normalized : bool, stride : int, pointer : int )
-
--- OGL: Textures
-!nogc extern glGenTextures( n : int, textures : [uint32] )
-!nogc extern glBindTexture( target : uint32, texture : uint32)
-!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, typ : uint32, data : uint32) -- for empty textures
-!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, typ : uint32, data : [byte])
-!nogc extern glTexImage2D( target : uint32, level : int, internalFormat : uint32, width : int, height : int, border : int, format : uint32, typ : uint32, data : [float])
-!nogc extern glTexParameteri( target : uint32, pname : uint32, param : uint32 )
-
--- OGL: FBO
-!nogc extern glGenRenderbuffers( n : int, renderbuffers : [uint32] )
-!nogc extern glBindRenderbuffer( target : uint32, renderbuffer : uint32)
-!nogc extern glRenderbufferStorage( target : uint32, internalformat : uint32, width : int, height : int)
-!nogc extern glGenFramebuffers( n : int, framebuffers : [uint32] )
-!nogc extern glBindFramebuffer( target : uint32, framebuffer : uint32)
-!nogc extern glFramebufferRenderbuffer(  target : uint32, attachment : uint32, renderbuffertarget : uint32, renderbuffer : uint32)
-!nogc extern glFramebufferTexture( target : uint32, attachment : uint32, texture : uint32, level : int )
-!nogc extern glDrawBuffers( n : int, bufs : [uint32] )
-!nogc extern glCheckFramebufferStatus( target : uint32 ) : uint32
-
-
--- FMOD: Core
-!nogc extern FMOD_System_Create(system : Wrap<uint64>) : uint64
-!nogc extern FMOD_System_Init(system : uint64, maxchannels : int, flags : uint64, extradriverdata : uint64) : uint64
-!nogc extern FMOD_System_CreateSound(system : uint64, path : String, mode : uint64, exinfo : uint64, sound : Wrap<uint64>) : uint64
-!nogc extern FMOD_System_PlaySound(system : uint64, channelid : int, sound : uint64, paused : bool, channel : Wrap<uint64>) : uint64
-!nogc extern FMOD_Channel_GetPosition(channelid : uint64, ms : Wrap<uint64>, timeunit : uint64);
-
 -- C Std funcs
-!nogc extern fopen( filename: String, mode: String) : uint64
-!nogc extern fseek( stream : uint64, offset : int64, whence : int ) : int
-!nogc extern ftell( stream : uint64 ) : int
-!nogc extern fclose( stream : uint64 ) : int
-!nogc extern fread( ptr : [byte], size : int, count : int, stream : uint64) : int64
-!nogc extern chdir(path : String) : int
+!nogc extern fopen(filename: String, mode: String) : uint64
+!nogc extern fseek(stream : uint64, offset : int64, whence : int) : int
+!nogc extern ftell(stream : uint64): int
+!nogc extern fclose(stream : uint64): int
+!nogc extern fread(ptr : [byte], size : int, count : int, stream : uint64): int64
+!nogc extern chdir(path : String): int
 
 
 -----------------------------------------------------------------------
 -- Defines/enums
-
-local GL_FALSE : uint32 = 0x0u32
-local GL_TRUE  : uint32 = 0x1u32
-
-local GL_FLOAT : uint32 = 0x1406u32
-local GL_BYTE  : uint32 = 0x1400u32
-
-local GL_COLOR_BUFFER_BIT : uint32 = 0x4000u32
-local GL_BLEND            : uint32 = 0x0BE2u32
-local GL_ALPHA_TEST       : uint32 = 0x0BC0u32
-local GL_DEPTH_TEST       : uint32 = 0x0B71u32
-local GL_CULL_FACE        : uint32 = 0x0B44u32
-
-
-local GL_ZERO                : uint32 = 0u32
-local GL_ONE                 : uint32 = 1u32
-local GL_SRC_COLOR           : uint32 = 0x0300u32
-local GL_ONE_MINUS_SRC_COLOR : uint32 = 0x0301u32
-local GL_SRC_ALPHA           : uint32 = 0x0302u32
-local GL_ONE_MINUS_SRC_ALPHA : uint32 = 0x0303u32
-local GL_DST_ALPHA           : uint32 = 0x0304u32
-local GL_ONE_MINUS_DST_ALPHA : uint32 = 0x0305u32
-
-local GL_FRAGMENT_SHADER  : uint32 = 0x8B30u32
-local GL_VERTEX_SHADER    : uint32 = 0x8B31u32
-
-local GL_INFO_LOG_LENGTH  : uint32 = 0x8B84u32
-
-local GL_ARRAY_BUFFER     : uint32 = 0x8892u32
-local GL_STATIC_DRAW      : uint32 = 0x88E4u32
-local GL_TRIANGLES        : uint32 = 0x0004u32
-
-local GL_TEXTURE_2D       : uint32 = 0x0DE1u32
-local GL_RGBA             : uint32 = 0x1908u32
-local GL_UNSIGNED_BYTE    : uint32 = 0x1401u32
-local GL_LUMINANCE        : uint32 = 0x1901u32
-local GL_ALPHA            : uint32 = 0x1906u32
-local GL_R32F             : uint32 = 0x822Eu32
-local GL_RED              : uint32 = 0x1903u32
-
-local GL_TEXTURE_MAG_FILTER : uint32 = 0x2800u32
-local GL_TEXTURE_MIN_FILTER : uint32 = 0x2801u32
-local GL_NEAREST            : uint32 = 0x2600u32
-local GL_LINEAR             : uint32 = 0x2601u32
-
-local GL_FRAMEBUFFER       : uint32 = 0x8D40u32
-local GL_RENDERBUFFER      : uint32 = 0x8D41u32
-local GL_DEPTH_COMPONENT   : uint32 = 0x1902u32
-local GL_DEPTH_ATTACHMENT  : uint32 = 0x8D00u32
-local GL_COLOR_ATTACHMENT0 : uint32 = 0x8CE0u32
-local GL_FRAMEBUFFER_COMPLETE : uint32 = 0x8CD5u32
 
 local SEEK_SET            : int = 0
 local SEEK_CUR            : int = 1
@@ -281,146 +126,17 @@ local RAND_MAX            : int = 2147483647
 --
 local window: glfw.Window
 
-local FMOD_OK             : uint64 = 0u64
-local FMOD_ERR_ALREADYLOCKED : uint64          = 1u64
-local FMOD_ERR_BADCOMMAND : uint64             = 2u64
-local FMOD_ERR_CDDA_DRIVERS : uint64           = 3u64
-local FMOD_ERR_CDDA_INIT : uint64              = 4u64
-local FMOD_ERR_CDDA_INVALID_DEVICE : uint64    = 5u64
-local FMOD_ERR_CDDA_NOAUDIO : uint64           = 6u64
-local FMOD_ERR_CDDA_NODEVICES : uint64         = 7u64
-local FMOD_ERR_CDDA_NODISC : uint64            = 8u64
-local FMOD_ERR_CDDA_READ : uint64              = 9u64
-local FMOD_ERR_CHANNEL_ALLOC : uint64          = 10u64
-local FMOD_ERR_CHANNEL_STOLEN : uint64         = 11u64
-local FMOD_ERR_COM : uint64                    = 12u64
-local FMOD_ERR_DMA : uint64                    = 13u64
-local FMOD_ERR_DSP_CONNECTION : uint64         = 14u64
-local FMOD_ERR_DSP_FORMAT : uint64             = 15u64
-local FMOD_ERR_DSP_NOTFOUND : uint64           = 16u64
-local FMOD_ERR_DSP_RUNNING : uint64            = 17u64
-local FMOD_ERR_DSP_TOOMANYCONNECTIONS : uint64 = 18u64
-local FMOD_ERR_FILE_BAD : uint64               = 19u64
-local FMOD_ERR_FILE_COULDNOTSEEK : uint64      = 20u64
-local FMOD_ERR_FILE_DISKEJECTED : uint64       = 21u64
-local FMOD_ERR_FILE_EOF : uint64               = 22u64
-local FMOD_ERR_FILE_NOTFOUND : uint64          = 23u64
-local FMOD_ERR_FILE_UNWANTED : uint64          = 24u64
-local FMOD_ERR_FORMAT : uint64                 = 25u64
-local FMOD_ERR_HTTP : uint64                   = 26u64
-local FMOD_ERR_HTTP_ACCESS : uint64            = 27u64
-local FMOD_ERR_HTTP_PROXY_AUTH : uint64        = 28u64
-local FMOD_ERR_HTTP_SERVER_ERROR : uint64      = 29u64
-local FMOD_ERR_HTTP_TIMEOUT : uint64           = 30u64
-local FMOD_ERR_INITIALIZATION : uint64         = 31u64
-local FMOD_ERR_INITIALIZED : uint64            = 32u64
-local FMOD_ERR_INTERNAL : uint64               = 33u64
-local FMOD_ERR_INVALID_ADDRESS : uint64        = 34u64
-local FMOD_ERR_INVALID_FLOAT : uint64          = 35u64
-local FMOD_ERR_INVALID_HANDLE : uint64         = 36u64
-local FMOD_ERR_INVALID_PARAM : uint64          = 37u64
-local FMOD_ERR_INVALID_POSITION : uint64       = 38u64
-local FMOD_ERR_INVALID_SPEAKER : uint64        = 39u64
-local FMOD_ERR_INVALID_SYNCPOINT : uint64      = 40u64
-local FMOD_ERR_INVALID_VECTOR : uint64         = 41u64
-local FMOD_ERR_MAXAUDIBLE : uint64             = 42u64
-local FMOD_ERR_MEMORY : uint64                 = 43u64
-local FMOD_ERR_MEMORY_CANTPOINT : uint64       = 44u64
-local FMOD_ERR_MEMORY_SRAM : uint64            = 45u64
-local FMOD_ERR_NEEDS2D : uint64                = 46u64
-local FMOD_ERR_NEEDS3D : uint64                = 47u64
-local FMOD_ERR_NEEDSHARDWARE : uint64          = 48u64
-local FMOD_ERR_NEEDSSOFTWARE : uint64          = 49u64
-local FMOD_ERR_NET_CONNECT : uint64            = 50u64
-local FMOD_ERR_NET_SOCKET_ERROR : uint64       = 51u64
-local FMOD_ERR_NET_URL : uint64                = 52u64
-local FMOD_ERR_NET_WOULD_BLOCK : uint64        = 53u64
-local FMOD_ERR_NOTREADY : uint64               = 54u64
-local FMOD_ERR_OUTPUT_ALLOCATED : uint64       = 55u64
-local FMOD_ERR_OUTPUT_CREATEBUFFER : uint64    = 56u64
-local FMOD_ERR_OUTPUT_DRIVERCALL : uint64      = 57u64
-local FMOD_ERR_OUTPUT_ENUMERATION : uint64     = 58u64
-local FMOD_ERR_OUTPUT_FORMAT : uint64          = 59u64
-local FMOD_ERR_OUTPUT_INIT : uint64            = 60u64
-local FMOD_ERR_OUTPUT_NOHARDWARE : uint64      = 61u64
-local FMOD_ERR_OUTPUT_NOSOFTWARE : uint64      = 62u64
-local FMOD_ERR_PAN : uint64                    = 63u64
-local FMOD_ERR_PLUGIN : uint64                 = 64u64
-local FMOD_ERR_PLUGIN_INSTANCES : uint64       = 65u64
-local FMOD_ERR_PLUGIN_MISSING : uint64         = 66u64
-local FMOD_ERR_PLUGIN_RESOURCE : uint64        = 67u64
-local FMOD_ERR_PRELOADED : uint64              = 68u64
-local FMOD_ERR_PROGRAMMERSOUND : uint64        = 69u64
-local FMOD_ERR_RECORD : uint64                 = 70u64
-local FMOD_ERR_REVERB_INSTANCE : uint64        = 71u64
-local FMOD_ERR_SUBSOUND_ALLOCATED : uint64     = 72u64
-local FMOD_ERR_SUBSOUND_CANTMOVE : uint64      = 73u64
-local FMOD_ERR_SUBSOUND_MODE : uint64          = 74u64
-local FMOD_ERR_SUBSOUNDS : uint64              = 75u64
-local FMOD_ERR_TAGNOTFOUND : uint64            = 76u64
-local FMOD_ERR_TOOMANYCHANNELS : uint64        = 77u64
-local FMOD_ERR_UNIMPLEMENTED : uint64          = 78u64
-local FMOD_ERR_UNINITIALIZED : uint64          = 79u64
-local FMOD_ERR_UNSUPPORTED : uint64            = 80u64
-local FMOD_ERR_UPDATE : uint64                 = 81u64
-local FMOD_ERR_VERSION : uint64                = 82u64
-local FMOD_ERR_EVENT_FAILED : uint64           = 83u64
-local FMOD_ERR_EVENT_INFOONLY : uint64         = 84u64
-local FMOD_ERR_EVENT_INTERNAL : uint64         = 85u64
-local FMOD_ERR_EVENT_MAXSTREAMS : uint64       = 86u64
-local FMOD_ERR_EVENT_MISMATCH : uint64         = 87u64
-local FMOD_ERR_EVENT_NAMECONFLICT : uint64     = 88u64
-local FMOD_ERR_EVENT_NOTFOUND : uint64         = 89u64
-local FMOD_ERR_EVENT_NEEDSSIMPLE : uint64      = 90u64
-local FMOD_ERR_EVENT_GUIDCONFLICT : uint64     = 91u64
-local FMOD_ERR_EVENT_ALREADY_LOADED : uint64   = 92u64
-local FMOD_ERR_MUSIC_UNINITIALIZED : uint64    = 93u64
-local FMOD_ERR_MUSIC_NOTFOUND : uint64         = 94u64
-local FMOD_ERR_MUSIC_NOCALLBACK : uint64       = 95u64
-
-local FMOD_DEFAULT                   : uint64 = 0x00000000u64
-local FMOD_LOOP_OFF                  : uint64 = 0x00000001u64
-local FMOD_LOOP_NORMAL               : uint64 = 0x00000002u64
-local FMOD_LOOP_BIDI                 : uint64 = 0x00000004u64
-local FMOD_2D                        : uint64 = 0x00000008u64
-local FMOD_3D                        : uint64 = 0x00000010u64
-local FMOD_HARDWARE                  : uint64 = 0x00000020u64
-local FMOD_SOFTWARE                  : uint64 = 0x00000040u64
-local FMOD_CREATESTREAM              : uint64 = 0x00000080u64
-local FMOD_CREATESAMPLE              : uint64 = 0x00000100u64
-local FMOD_CREATECOMPRESSEDSAMPLE    : uint64 = 0x00000200u64
-local FMOD_OPENUSER                  : uint64 = 0x00000400u64
-local FMOD_OPENMEMORY                : uint64 = 0x00000800u64
-local FMOD_OPENMEMORY_POINT          : uint64 = 0x10000000u64
-local FMOD_OPENRAW                   : uint64 = 0x00001000u64
-local FMOD_OPENONLY                  : uint64 = 0x00002000u64
-local FMOD_ACCURATETIME              : uint64 = 0x00004000u64
-local FMOD_MPEGSEARCH                : uint64 = 0x00008000u64
-local FMOD_NONBLOCKING               : uint64 = 0x00010000u64
-local FMOD_UNIQUE                    : uint64 = 0x00020000u64
-local FMOD_3D_HEADRELATIVE           : uint64 = 0x00040000u64
-local FMOD_3D_WORLDRELATIVE          : uint64 = 0x00080000u64
-local FMOD_3D_INVERSEROLLOFF         : uint64 = 0x00100000u64
-local FMOD_3D_LINEARROLLOFF          : uint64 = 0x00200000u64
-local FMOD_3D_LINEARSQUAREROLLOFF    : uint64 = 0x00400000u64
-local FMOD_3D_CUSTOMROLLOFF          : uint64 = 0x04000000u64
-local FMOD_3D_IGNOREGEOMETRY         : uint64 = 0x40000000u64
-local FMOD_UNICODE                   : uint64 = 0x01000000u64
-local FMOD_IGNORETAGS                : uint64 = 0x02000000u64
-local FMOD_LOWMEM                    : uint64 = 0x08000000u64
-local FMOD_LOADSECONDARYRAM          : uint64 = 0x20000000u64
-local FMOD_VIRTUAL_PLAYFROMSTART     : uint64 = 0x80000000u64
 
 ------------------------------------------------------------------------
 -- Helpers
 function error_lut(id : uint32) : String
-    if (id == 0u32) then
+    if id == 0u32 then
         return "GL_NO_ERROR"
-    elseif (id == 0x0500u32) then
+    elseif id == 0x0500u32 then
         return "GL_INVALID_ENUM"                   -- 0x0500
-    elseif (id == 0x0501u32) then
+    elseif id == 0x0501u32 then
         return "GL_INVALID_VALUE"                  -- 0x0501
-    elseif (id == 0x0502u32) then
+    elseif id == 0x0502u32 then
         return "GL_INVALID_OPERATION"              -- 0x0502
     end
 
@@ -428,11 +144,11 @@ function error_lut(id : uint32) : String
 end
 
 function log_error(id : String)
-    io.println( "[ \x1B[31m!!\x1B[0m ] " .. id )
+    io.println("[ \x1B[31m!!\x1B[0m ] " .. id)
 end
 
-function log_ok( id : String )
-    io.println( "[ \x1B[32mok\x1B[0m ] " .. id )
+function log_ok(id : String)
+    io.println("[ \x1B[32mok\x1B[0m ] " .. id)
 end
 
 function random() : float
@@ -440,7 +156,7 @@ function random() : float
 end
 
 function check_error(id : String, print_on_ok : bool) : bool
-    local err = glGetError()
+    local err = gl.get_error()
     if err ~= 0u32 then
         log_error(id .. " - Error: " .. error_lut(err))
         return false
@@ -454,10 +170,10 @@ end
 
 function shader_log(obj : uint32)
     local size:[int] = [200:int]
-    if glIsShader(obj) then
-        glGetShaderiv( obj, GL_INFO_LOG_LENGTH, size )
+    if gl.is_shader(obj) then
+        gl.get_shaderiv(obj, gl.GL_INFO_LOG_LENGTH, size)
     else
-        glGetProgramiv( obj, GL_INFO_LOG_LENGTH, size )
+        gl.get_programiv(obj, gl.GL_INFO_LOG_LENGTH, size)
     end
     if size[0] == 0 then
         return
@@ -465,143 +181,135 @@ function shader_log(obj : uint32)
 
     local sub_sizes:[int] = [1:int]
     local data:[byte] = [size[0]:byte]
-    if glIsShader(obj) then
-        glGetShaderInfoLog( obj, size[0], sub_sizes, data)
+    if gl.is_shader(obj) then
+        gl.get_shader_info_log(obj, size[0], sub_sizes, data)
     else
-        glGetProgramInfoLog( obj, size[0], sub_sizes, data)
+        gl.get_program_info_log(obj, size[0], sub_sizes, data)
     end
 
-    io.println("Shader log:\n" .. string(data) )
+    io.println("Shader log:\n" .. string(data))
 end
 
 function read_file(file_path : String) : [byte]
     local f = fopen(file_path, "r")
 
     if (f ~= 0u64) then
-        fseek( f, 0i64, SEEK_END )
-        local len : int = ftell( f ) + 1
+        fseek(f, 0i64, SEEK_END)
+        local len : int = ftell(f) + 1
         local ret : [byte] = [len:byte]
         fseek(f, 0i64, SEEK_SET)
         -- FIXME make sure we read the whole file...
-        fread( ret, 1, len, f )
-        fclose( f );
+        fread(ret, 1, len, f)
+        fclose(f);
 
         -- make sure we null term
         ret[len-1] = 0u8
 
-        log_ok( "read " .. file_path )
+        log_ok("read " .. file_path)
 
         return ret
     else
-        log_error( "could not open " .. file_path )
+        log_error("could not open " .. file_path)
     end
 
     local ret : [byte]
     return ret
 end
 
-function read_file_as_string( file_path : String ) : String
+function read_file_as_string(file_path : String) : String
     return string(read_file(file_path))
 end
 
 ------------------------------------------------------------------------
 -- "Resources"
-function create_texture( width : int, height : int, data : [byte] ) : uint32
-    local textures : [uint32] = [1:uint32]
-    glGenTextures( 1, textures )
-    check_error("creating texture", true )
-    local texture : uint32 = textures[0]
+function create_texture(width : int, height : int, data : [byte]) : uint32
+    let texture = gl.gen_texture()
+    check_error("creating texture", true)
 
-    glBindTexture( GL_TEXTURE_2D, texture )
-    check_error("bound texture", false )
+    gl.bind_texture(gl.GL_TEXTURE_2D, texture)
+    check_error("bound texture", false)
 
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST )
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST )
+    gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+    gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
 
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data )
-    check_error("uploaded texture data", true )
+    gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, data)
+    check_error("uploaded texture data", true)
 
-    glBindTexture( GL_TEXTURE_2D, 0u32 )
-    check_error("unbound texture", false )
+    gl.bind_texture(gl.GL_TEXTURE_2D, 0u32)
+    check_error("unbound texture", false)
 
     return texture
 end
 
 
-function create_empty_texture( width : int, height : int ) : uint32
-    local textures : [uint32] = [1:uint32]
-    glGenTextures(1, textures )
-    check_error("creating empty texture", true )
-    local texture : uint32 = textures[0]
+function create_empty_texture(width : int, height : int) : uint32
+    let texture = gl.gen_texture()
+    check_error("creating empty texture", true)
 
-    glBindTexture( GL_TEXTURE_2D, texture )
-    check_error("bind texture", true )
+    gl.bind_texture(gl.GL_TEXTURE_2D, texture)
+    check_error("bind texture", true)
 
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST )
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST )
+    gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+    gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
 
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0u32 )
-    check_error("upload empty texture", true )
+    gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, 0u32)
+    check_error("upload empty texture", true)
 
-    glBindTexture( GL_TEXTURE_2D, 0u32 )
-    check_error("unbound texture", true )
+    gl.bind_texture(gl.GL_TEXTURE_2D, 0u32)
+    check_error("unbound texture", true)
 
     return texture
 end
 
 
-function create_fbo( width : int, height : int, attach_depth : bool ) : uint32, uint32
+function create_fbo(width : int, height : int, attach_depth : bool) : uint32, uint32
     io.print(width)
     io.print(height)
 
     local framebuffers : [uint32] = [1:uint32]
-    glGenFramebuffers( 1, framebuffers )
-    check_error("creating fbo", true )
+    gl.gen_framebuffers(1, framebuffers)
+    check_error("creating fbo", true)
 
     local fbo : uint32 = framebuffers[0]
-    glBindFramebuffer( GL_FRAMEBUFFER, fbo )
+    gl.bind_framebuffer(gl.GL_FRAMEBUFFER, fbo)
 
     -- gen empty texture
-    local texture = create_empty_texture( width, height )
+    local texture = create_empty_texture(width, height)
 
-    local depthbuffers : [uint32] = [1:uint32]
-    glGenRenderbuffers( 1, depthbuffers )
-    local depthbuffer : uint32 = depthbuffers[0]
-    check_error("creating depth buffer", true )
-    glBindRenderbuffer( GL_RENDERBUFFER, depthbuffer )
-    glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height )
-    check_error("binding depth buffer", true )
-    glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer )
-    check_error("binding texture", true )
-    glFramebufferTexture( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0 );
+    let depthbuffer = gl.gen_renderbuffer()
+    check_error("creating depth buffer", true)
+    gl.bind_renderbuffer(gl.GL_RENDERBUFFER, depthbuffer)
+    gl.renderbuffer_storage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT, width, height)
+    check_error("binding depth buffer", true)
+    gl.framebuffer_renderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT, gl.GL_RENDERBUFFER, depthbuffer)
+    check_error("binding texture", true)
+    gl.framebuffer_texture(gl.GL_FRAMEBUFFER, gl.GL_COLOR_ATTACHMENT0, texture, 0);
 
-
-    local fbo_status : uint32 = glCheckFramebufferStatus( GL_FRAMEBUFFER )
-    if (fbo_status ~= GL_FRAMEBUFFER_COMPLETE) then
+    local fbo_status : uint32 = gl.check_framebuffer_status(gl.GL_FRAMEBUFFER)
+    if (fbo_status ~= gl.GL_FRAMEBUFFER_COMPLETE) then
         log_error("fbo is not complete!")
     else
         log_ok("fbo is complete")
     end
-    glBindFramebuffer( GL_FRAMEBUFFER, 0u32 )
+    gl.bind_framebuffer(gl.GL_FRAMEBUFFER, 0u32)
 
     return fbo, texture
 end
 
 
-function render_to_fbo( fbo : uint32 )
-    glBindFramebuffer( GL_FRAMEBUFFER, fbo )
-    check_error("binding fbo", false )
+function render_to_fbo(fbo : uint32)
+    gl.bind_framebuffer(gl.GL_FRAMEBUFFER, fbo)
+    check_error("binding fbo", false)
 
     if (fbo ~= 0u32) then
-        local drawbuffers : [uint32] = [GL_COLOR_ATTACHMENT0];
-        glDrawBuffers( 1, drawbuffers )
-        check_error("drawing to fbo", false )
+        gl.draw_buffer(gl.GL_COLOR_ATTACHMENT0)
+        check_error("drawing to fbo", false)
     end
 end
 
 
-function create_quad_batch(capacity : int ) : QuadBatch
-    local qb = QuadBatch { vert_gl  = 0u32,
+function create_quad_batch(capacity : int) : QuadBatch
+    let qb = QuadBatch { vert_gl  = 0u32,
                            uv_gl    = 0u32,
                            vert_buf = [capacity*3*6: float],
                            uv_buf   = [capacity*2*6: float],
@@ -609,58 +317,54 @@ function create_quad_batch(capacity : int ) : QuadBatch
                            cursor   = 0 }
 
     -- generate gl buffers
-    local buffers = Wrap<@{uint32, uint32}>{{0u32, 0u32}}
-    glGenBuffers(2, buffers)
-    qb.vert_gl = buffers.value.0
-    qb.uv_gl   = buffers.value.1
+    qb.vert_gl = gl.gen_buffer()
+    qb.uv_gl = gl.gen_buffer()
 
-    local vao = Wrap<uint32>{}
-    glGenVertexArrays(1, vao)
-    qb.vao = vao.value
+    qb.vao = gl.gen_vertex_array()
 
-    glBindVertexArray(vao.value)
-    glEnableVertexAttribArray( 0 )
-    glBindBuffer(GL_ARRAY_BUFFER, qb.vert_gl )
-    glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
-    glBindVertexArray(0u32)
+    gl.bind_vertex_array(qb.vao)
+    gl.enable_vertex_attrib_array(0)
+    gl.bind_buffer(gl.GL_ARRAY_BUFFER, qb.vert_gl)
+    gl.vertex_attrib_pointer(0u32, 3, gl.GL_FLOAT, false, 0, 0)
+    gl.bind_vertex_array(0u32)
 
     return qb
 end
 
-function qb_begin( qb : QuadBatch )
+function qb_begin(qb : QuadBatch)
     qb.cursor = 0
 end
 
-function qb_end( qb : QuadBatch )
+function qb_end(qb : QuadBatch)
     local i : int = qb.cursor*3*6
 
-    glBindVertexArray(qb.vao)
+    gl.bind_vertex_array(qb.vao)
 
-    glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, qb.vert_gl )
-    check_error( "qb_render: binding vert buffer", false )
-    glBufferData( GL_ARRAY_BUFFER, i*4, qb.vert_buf, GL_STATIC_DRAW )
-    check_error( "qb_render: upload vert buffer", false )
-    glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0)
+    gl.enable_vertex_attrib_array(0)
+    gl.bind_buffer(gl.GL_ARRAY_BUFFER, qb.vert_gl)
+    check_error("qb_render: binding vert buffer", false)
+    gl.buffer_data(gl.GL_ARRAY_BUFFER, i*4, qb.vert_buf, gl.GL_STATIC_DRAW)
+    check_error("qb_render: upload vert buffer", false)
+    gl.vertex_attrib_pointer(0u32, 3, gl.GL_FLOAT, false, 0, 0)
 
-    glEnableVertexAttribArray( 1 )
-    glBindBuffer( GL_ARRAY_BUFFER, qb.uv_gl )
-    check_error( "qb_render: binding uv buffer", false )
-    glBufferData( GL_ARRAY_BUFFER, i*4, qb.uv_buf, GL_STATIC_DRAW )
-    check_error( "qb_render: upload uv buffer", false )
-    glVertexAttribPointer(1u32, 2, GL_FLOAT, false, 0, 0)
+    gl.enable_vertex_attrib_array(1)
+    gl.bind_buffer(gl.GL_ARRAY_BUFFER, qb.uv_gl)
+    check_error("qb_render: binding uv buffer", false)
+    gl.buffer_data(gl.GL_ARRAY_BUFFER, i*4, qb.uv_buf, gl.GL_STATIC_DRAW)
+    check_error("qb_render: upload uv buffer", false)
+    gl.vertex_attrib_pointer(1u32, 2, gl.GL_FLOAT, false, 0, 0)
 
-    glBindVertexArray(0u32)
+    gl.bind_vertex_array(0u32)
 end
 
 
-function qb_render( qb : QuadBatch )
-    glBindVertexArray(qb.vao)
-    glDrawArrays( GL_TRIANGLES, 0u32, qb.cursor*6 );
+function qb_render(qb : QuadBatch)
+    gl.bind_vertex_array(qb.vao)
+    gl.draw_arrays(gl.GL_TRIANGLES, 0u32, qb.cursor*6);
 end
 
 
-function qb_add( qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float)
+function qb_add(qb : QuadBatch, x0 : float, y0 : float, x1 : float, y1 : float, u0 : float, v0 : float, u1 : float, v1 : float)
 --    d - c
 --    | / |
 --    a - b
@@ -846,16 +550,16 @@ function qb_add_centered(qb : QuadBatch, x : float, y : float, w : float, h : fl
 
     local wh = w / 2.0f
     local hh = h / 2.0f
-    qb_add( qb, x - wh, y - hh, x + wh, y + hh, u0, v0, u1, v1 )
+    qb_add(qb, x - wh, y - hh, x + wh, y + hh, u0, v0, u1, v1)
 
 end
 
 
 function create_quad() : uint32
-    local buffers = Wrap<uint32>{}
-    glGenBuffers(1, buffers)
+    local buffer = gl.gen_buffer()
     check_error("creating geo buffers", true)
-    glBindBuffer(GL_ARRAY_BUFFER, buffers.value)
+
+    gl.bind_buffer(gl.GL_ARRAY_BUFFER, buffer)
     check_error("binding geo buffers", true)
 
     local data = [12:float]
@@ -877,51 +581,50 @@ function create_quad() : uint32
     data[10] = -1.0f
     data[11] =  1.0f
 
-    glBufferData(GL_ARRAY_BUFFER, 6*2*4, data, GL_STATIC_DRAW )
+    gl.buffer_data(gl.GL_ARRAY_BUFFER, 6*2*4, data, gl.GL_STATIC_DRAW)
     check_error("loading geo buffers", true)
 
-    local vao = Wrap<uint32>{}
-    glGenVertexArrays(1, vao);
-    glBindVertexArray(vao.value);
+    let vao = gl.gen_vertex_array();
+    gl.bind_vertex_array(vao);
 
-    glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers.value )
-    glVertexAttribPointer(0u32, 2, GL_FLOAT, false, 0, 0);
+    gl.enable_vertex_attrib_array(0)
+    gl.bind_buffer(gl.GL_ARRAY_BUFFER, buffer)
+    gl.vertex_attrib_pointer(0u32, 2, gl.GL_FLOAT, false, 0, 0);
 
-    return vao.value
+    return vao
 end
 
 
-function create_shader( vert_src : String, frag_src : String ) : uint32
-    local vert = glCreateShader( GL_VERTEX_SHADER )
-    local frag = glCreateShader( GL_FRAGMENT_SHADER )
-    local shader = glCreateProgram()
+function create_shader(vert_src : String, frag_src : String) : uint32
+    local vert = gl.create_shader(gl.GL_VERTEX_SHADER)
+    local frag = gl.create_shader(gl.GL_FRAGMENT_SHADER)
+    local shader = gl.create_program()
     check_error("create programs", true)
 
     local a : [String] = [1:String]
     a[0] = vert_src
-    glShaderSource( vert, 1u64, a, 0u32 )
+    gl.shader_source(vert, 1u64, a, 0u32)
     check_error("shader vert source", true)
-    glCompileShader( vert )
+    gl.compile_shader(vert)
     check_error("shader vert compile", true)
-    shader_log( vert )
+    shader_log(vert)
 
     local a : [String] = [1:String]
     a[0] = frag_src
-    glShaderSource( frag, 1u64, a, 0u32 )
+    gl.shader_source(frag, 1u64, a, 0u32)
     check_error("shader frag source", true)
-    glCompileShader( frag )
+    gl.compile_shader(frag)
     check_error("shader frag compile", true)
-    shader_log( frag )
+    shader_log(frag)
 
-    glAttachShader( shader, vert )
+    gl.attach_shader(shader, vert)
     check_error("shader attach vert", true)
-    glAttachShader( shader, frag )
+    gl.attach_shader(shader, frag)
     check_error("shader attach frag", true)
 
-    glLinkProgram( shader )
+    gl.link_program(shader)
     check_error("shader link", true)
-    shader_log( shader )
+    shader_log(shader)
 
     return shader
 end
@@ -949,7 +652,7 @@ function create_lut()
 end
 
 
-function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float )
+function qb_text(qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float)
     local delta = 16.0f / 256.0f
     local i = 0
     local x = start_x
@@ -959,7 +662,7 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
         local u1 = u0 + delta
         local v1 = v0 + delta
 
-        qb_add_centered( qb, x, start_y, char_w, char_w, u0, v1, u1, v0 )
+        qb_add_centered(qb, x, start_y, char_w, char_w, u0, v1, u1, v0)
 
         i = i + 1
         x = x + spacing
@@ -968,7 +671,7 @@ function qb_text( qb : QuadBatch, start_x : float, start_y : float, txt : String
 end
 
 
-function qb_text_slam( qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float, where2:float )
+function qb_text_slam(qb : QuadBatch, start_x : float, start_y : float, txt : String, char_w : float, spacing : float, where2:float)
     local delta = 16.0f / 256.0f
     local i = 0
     local x = start_x
@@ -992,7 +695,7 @@ function qb_text_slam( qb : QuadBatch, start_x : float, start_y : float, txt : S
             end
         end
 
-        qb_add_centered( qb, x, start_y, char_w*size, char_w*size, u0, v1, u1, v0 )
+        qb_add_centered(qb, x, start_y, char_w*size, char_w*size, u0, v1, u1, v0)
 
         i = i + 1
         x = x + spacing
@@ -1033,6 +736,7 @@ local test_psys : ParticleSystem = ParticleSystem {
     mode = PARTICLE_MODE_STATIC,
     figure = PARTICLE_FIGURE_CUBE,
     cool_down = 0.0f }
+
 
 function init_meshy_cube()
     test_psys.particle_buf = [MAX_PARTICLE_COUNT:@Particle]
@@ -1108,15 +812,15 @@ function gen_pyramid_particles(x: float, y: float, z: float, w: float, h: float,
     local points_per_line = MAX_PARTICLE_COUNT as float / lines as float
 
     local ppl_i = points_per_line as int
-    gen_points_from_line(v0, v1, ppl_i, ps, ppl_i*0 )
-    gen_points_from_line(v1, v2, ppl_i, ps, ppl_i*1 )
-    gen_points_from_line(v2, v3, ppl_i, ps, ppl_i*2 )
-    gen_points_from_line(v3, v0, ppl_i, ps, ppl_i*3 )
+    gen_points_from_line(v0, v1, ppl_i, ps, ppl_i*0)
+    gen_points_from_line(v1, v2, ppl_i, ps, ppl_i*1)
+    gen_points_from_line(v2, v3, ppl_i, ps, ppl_i*2)
+    gen_points_from_line(v3, v0, ppl_i, ps, ppl_i*3)
 
-    gen_points_from_line(v0, v4, ppl_i, ps, ppl_i*4 )
-    gen_points_from_line(v1, v4, ppl_i, ps, ppl_i*5 )
-    gen_points_from_line(v2, v4, ppl_i, ps, ppl_i*6 )
-    gen_points_from_line(v3, v4, MAX_PARTICLE_COUNT - ppl_i*7, ps, ppl_i*7 )
+    gen_points_from_line(v0, v4, ppl_i, ps, ppl_i*4)
+    gen_points_from_line(v1, v4, ppl_i, ps, ppl_i*5)
+    gen_points_from_line(v2, v4, ppl_i, ps, ppl_i*6)
+    gen_points_from_line(v3, v4, MAX_PARTICLE_COUNT - ppl_i*7, ps, ppl_i*7)
 end
 
 
@@ -1166,7 +870,7 @@ function gen_cube_particles(x: float, y: float, z: float, w: float, h: float, d:
 end
 
 
-function gen_sphere_particles( x: float, y: float, z: float, w: float, h: float, d: float, ps: ParticleSystem, mtx: matrix.Matrix)
+function gen_sphere_particles(x: float, y: float, z: float, w: float, h: float, d: float, ps: ParticleSystem, mtx: matrix.Matrix)
     let max_particle_count = MAX_PARTICLE_COUNT
     local dt = 3.1415f * 2.0f * 16.0f /  max_particle_count as float
     for i, particle in ps.particle_buf do
@@ -1336,12 +1040,12 @@ function run_particle_test()
         let widthf = width as float
         let heightf = height as float
 
-        glViewport(0, 0, width, height)
-        glClearColor(1.0f, 0.2f, 0.2f, 1.0f)
-        glClear( 0x4100u32 )
-        glDisable( GL_BLEND )
-        glEnable( GL_DEPTH_TEST )
-        glDisable( GL_CULL_FACE )
+        gl.viewport(0, 0, width, height)
+        gl.clear_color(1.0f, 0.2f, 0.2f, 1.0f)
+        gl.clear(0x4100u32)
+        gl.disable(gl.GL_BLEND)
+        gl.enable(gl.GL_DEPTH_TEST)
+        gl.disable(gl.GL_CULL_FACE)
 
         local delta = glfw.get_time() - last_time_stamp
         last_time_stamp = glfw.get_time()
@@ -1360,9 +1064,9 @@ function scene_particle_init()
     local vertex_src : String = read_file_as_string("data/shaders/particle_3d.vp")
     local fragment_src : String = read_file_as_string("data/shaders/particle.fp")
 
-    particle_shader = create_shader( vertex_src, fragment_src )
+    particle_shader = create_shader(vertex_src, fragment_src)
     check_error("(particle) create shader", false)
-    particle_loc_mtx = glGetUniformLocation( particle_shader, "mtx")
+    particle_loc_mtx = gl.get_uniform_location(particle_shader, "mtx")
     check_error("(particle) getting locations", false)
 
     particle_qb = create_quad_batch(particle_amount)
@@ -1379,38 +1083,36 @@ function scene_particle_draw(window: glfw.Window, mtx: matrix.Matrix, delta: flo
 
     local deltaf = delta
 
-    glDisable(GL_DEPTH_TEST)
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_ONE, GL_ONE)
+    gl.disable(gl.GL_DEPTH_TEST)
+    gl.enable(gl.GL_BLEND)
+    gl.blend_func(gl.GL_ONE, gl.GL_ONE)
 
     update_meshy_cube(test_psys, particle_qb, delta)
 
-    glUseProgram(particle_shader)
-    glUniformMatrix4fv(particle_loc_mtx, 1, true, mtx)
+    gl.use_program(particle_shader)
+    gl.uniform_matrix4fv(particle_loc_mtx, 1, true, mtx)
     qb_render(particle_qb)
 end
 
 
-function create_mesh( path : String ) : uint32
-    local buffers = Wrap<uint32>{}
-    glGenBuffers(1, buffers)
-    glBindBuffer(GL_ARRAY_BUFFER, buffers.value)
+function create_mesh(path : String) : uint32
+    local buffer = gl.gen_buffer()
+    gl.bind_buffer(gl.GL_ARRAY_BUFFER, buffer)
 
-    local data : [byte] = read_file( path )
+    local data : [byte] = read_file(path)
     io.println(#data)
 
-    glBufferData( GL_ARRAY_BUFFER, #data, data, GL_STATIC_DRAW )
-    check_error( "loading mesh geo buffers", true )
+    gl.buffer_data(gl.GL_ARRAY_BUFFER, #data, data, gl.GL_STATIC_DRAW)
+    check_error("loading mesh geo buffers", true)
 
-    local vao = Wrap<uint32>{}
-    glGenVertexArrays( 1, vao );
-    glBindVertexArray(vao.value);
+    let vao = gl.gen_vertex_array();
+    gl.bind_vertex_array(vao);
 
-    glEnableVertexAttribArray( 0 )
-    glBindBuffer( GL_ARRAY_BUFFER, buffers.value )
-    glVertexAttribPointer(0u32, 3, GL_FLOAT, false, 0, 0);
+    gl.enable_vertex_attrib_array(0)
+    gl.bind_buffer(gl.GL_ARRAY_BUFFER, buffer)
+    gl.vertex_attrib_pointer(0u32, 3, gl.GL_FLOAT, false, 0, 0);
 
-    return vao.value
+    return vao
 end
 
 
@@ -1426,11 +1128,11 @@ end
 local floorsize:int = 256
 
 struct HF
-    heights : @[float:65536];
+    heights : @[float:65536]
 end
 
-local floordata:[@HF] = [2:@HF];
-local music_channel:uint64;
+local floordata:[@HF] = [2:@HF]
+local music_channel: fmod.Channel
 
 function gen_floor(qb:QuadBatch, gridsize:int)
     qb_begin(qb);
@@ -1475,7 +1177,7 @@ function run_floor()
     local fb : QuadBatch = create_quad_batch(1024*1024)
 
     -- logo texture
-    local logo_data : [byte] = read_file( "data/textures/defold_logo.raw" )
+    local logo_data : [byte] = read_file("data/textures/defold_logo.raw")
     local logo_tex = create_texture(1280, 447, logo_data)
     local logo_qb = create_quad_batch(12)
 
@@ -1487,56 +1189,55 @@ function run_floor()
     -- voxel
     vertex_src  = read_file_as_string("data/shaders/voxel.vp")
     fragment_src  = read_file_as_string("data/shaders/voxel.fp")
-    local voxel_shader = create_shader( vertex_src, fragment_src )
+    local voxel_shader = create_shader(vertex_src, fragment_src)
     local voxel_qb = create_quad_batch(1024*1024);
 
     --- text
     vertex_src  = read_file_as_string("data/shaders/shader.vp")
     fragment_src  = read_file_as_string("data/shaders/shader.fp")
-    local text_shader = create_shader( vertex_src, fragment_src )
+    local text_shader = create_shader(vertex_src, fragment_src)
     check_error("(text) create shader", false);
     local text_qb : QuadBatch = create_quad_batch(1024)
-    local text_shader = create_shader( vertex_src, fragment_src )
+    local text_shader = create_shader(vertex_src, fragment_src)
     check_error("(particle) create shader", false)
 
-    local loc_mtx:int = glGetUniformLocation( floor_shader, "mtx")
+    local loc_mtx:int = gl.get_uniform_location(floor_shader, "mtx")
     check_error("(particle) getting locations", false)
-    local water_fade:int = glGetUniformLocation( floor_shader, "waterFade");
-    local logo_fade:int = glGetUniformLocation( floor_shader, "logoFade");
-    local water_time:int = glGetUniformLocation( floor_shader, "waterTime");
+    local water_fade:int = gl.get_uniform_location(floor_shader, "waterFade");
+    local logo_fade:int = gl.get_uniform_location(floor_shader, "logoFade");
+    local water_time:int = gl.get_uniform_location(floor_shader, "waterTime");
 
     local t:float = 0.0f
 
-    local tex0_data : [byte] = read_file( "data/textures/consolefont.raw")
+    local tex0_data : [byte] = read_file("data/textures/consolefont.raw")
     local tex0 = create_texture(256, 256, tex0_data)
 
     -- FBO stuff
     vertex_src  = read_file_as_string("data/shaders/screen.vp")
     fragment_src  = read_file_as_string("data/shaders/screen.fp")
-    local screen_shader = create_shader( vertex_src, fragment_src )
+    local screen_shader = create_shader(vertex_src, fragment_src)
     local screen_quad = create_quad()
 
-    local htex = [1:uint32]
-    glGenTextures(1, htex);
-    glBindTexture(GL_TEXTURE_2D, htex[0]);
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR )
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR )
+    let htex = gl.gen_texture()
+    gl.bind_texture(gl.GL_TEXTURE_2D, htex)
+    gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+    gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
 
     gen_floor(fb, 512)
 
     local cur = 1
     local anim = 0.0f
 
-    local last_time_stamp = glfw.get_time();
+    local last_time_stamp = glfw.get_time()
     local start_time = last_time_stamp
-    local to_water:float = 0.0f;
-    local water_t:float = 0.0f;
+    local to_water:float = 0.0f
+    local water_t:float = 0.0f
 
-    local to_logo:float = 0.0f;
-    local logo_t:float = 0.0f;
+    local to_logo:float = 0.0f
+    local logo_t:float = 0.0f
 
-    local psyk_t:float = 0.0f;
-    local next_switch = 0u64;
+    local psyk_t:float = 0.0f
+    local next_switch = 0u64
 
     local texdata: [float] = [65536:float]
 
@@ -1548,9 +1249,7 @@ function run_floor()
         local delta = (glfw.get_time() - last_time_stamp) as float
         last_time_stamp = glfw.get_time()
 
-        let tm = Wrap<uint64>{}
-        FMOD_Channel_GetPosition(music_channel, tm, 1u64)
-        let tm = tm.value
+        let tm = music_channel.get_position(1u64)
 
         if tm > 12000u64 then
            to_water = to_water + (1.0f - to_water) * 3.0f * delta
@@ -1568,7 +1267,7 @@ function run_floor()
 
         if tm > 25500u64 then
            if psyk_t == 0.0f then
-              next_switch = 0u64;
+              next_switch = 0u64
            end
            psyk_t = psyk_t + delta
         end
@@ -1590,12 +1289,12 @@ function run_floor()
         water_t = to_water * delta + water_t;
         logo_t = to_logo * delta + logo_t;
 
-        glViewport(0, 0, width, height)
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
-        glClear(0x4100u32)
-        glDisable(GL_BLEND)
-        glEnable(GL_DEPTH_TEST)
-        glDisable(GL_CULL_FACE)
+        gl.viewport(0, 0, width, height)
+        gl.clear_color(0.0f, 0.0f, 0.0f, 1.0f)
+        gl.clear(0x4100u32)
+        gl.disable(gl.GL_BLEND)
+        gl.enable(gl.GL_DEPTH_TEST)
+        gl.disable(gl.GL_CULL_FACE)
 
         local dolly = logo_t * 0.9f
         if dolly > 1.0f then
@@ -1608,20 +1307,20 @@ function run_floor()
         local persp = matrix.persp(-0.8f * fov, 0.8f * fov, -0.6f * fov, 0.6f * fov, 1.0f + dolly_dist, 700.0f + dolly_dist)
         local camera = matrix.multiply(persp, matrix.trans(0.0f, -elevate -50.0f + (1f-to_logo)*math.sin(t*0.2f)*10.0f, -250.0f - dolly_dist))
 
-        glUseProgram(floor_shader)
-        glUniformMatrix4fv(loc_mtx, 1, true, camera)
+        gl.use_program(floor_shader)
+        gl.uniform_matrix4fv(loc_mtx, 1, true, camera)
 
         -- convert & scale heights
         for k=0, 65536 do
            texdata[k] = 0.001f * floordata[cur].heights[k]
         end
 
-        glBindTexture(GL_TEXTURE_2D, htex[0]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 0, 0, 0, GL_RED, GL_FLOAT, texdata);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, floorsize, floorsize, 0, GL_RED, GL_FLOAT, texdata);
-        glUniform1f(water_fade, to_water);
-        glUniform1f(logo_fade, to_logo);
-        glUniform1f(water_time, water_t);
+        gl.bind_texture(gl.GL_TEXTURE_2D, htex);
+        gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, 0, 0, 0, gl.GL_RED, gl.GL_FLOAT, texdata);
+        gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, floorsize, floorsize, 0, gl.GL_RED, gl.GL_FLOAT, texdata);
+        gl.uniform1f(water_fade, to_water);
+        gl.uniform1f(logo_fade, to_logo);
+        gl.uniform1f(water_time, water_t);
 
         qb_render(fb)
         floor_sim(cur, 1 - cur)
@@ -1708,9 +1407,9 @@ function run_floor()
             test_psys.cool_down = 10000.0f
         end
 
-        glUseProgram(voxel_shader);
-        glUniformMatrix4fv(
-            glGetUniformLocation(voxel_shader, "mtx"),
+        gl.use_program(voxel_shader);
+        gl.uniform_matrix4fv(
+            gl.get_uniform_location(voxel_shader, "mtx"),
             1,
             true,
             matrix.multiply(camera,
@@ -1723,7 +1422,7 @@ function run_floor()
         qb_end(voxel_qb);
         qb_render(voxel_qb);
 
-        glUseProgram(particle_shader)
+        gl.use_program(particle_shader)
         scene_particle_draw(window, camera, 0.1f)
 
         if window.get_mouse_button(0) == 1 then
@@ -1749,23 +1448,23 @@ function run_floor()
         end
 
         ----- TEXt
-        glDisable(GL_DEPTH_TEST);
+        gl.disable(gl.GL_DEPTH_TEST);
 
         local ortho_mtx = matrix.ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.0f, 1.0f)
-        local location_mtx = glGetUniformLocation( text_shader, "mtx")
-        local location_anim = glGetUniformLocation( text_shader, "anim")
-        local location_offset = glGetUniformLocation( text_shader, "offset")
-        local location_mode = glGetUniformLocation( text_shader, "mode")
+        local location_mtx = gl.get_uniform_location(text_shader, "mtx")
+        local location_anim = gl.get_uniform_location(text_shader, "anim")
+        local location_offset = gl.get_uniform_location(text_shader, "offset")
+        local location_mode = gl.get_uniform_location(text_shader, "mode")
         check_error("getting locations", false)
 
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glUseProgram(text_shader);
-        glUniformMatrix4fv(location_mtx, 1, true, ortho_mtx);
-        glUniform1f(location_anim, t);
-        glUniform1f(location_offset, t);
-        glUniform1i(location_mode, 3);
-        glBindTexture( GL_TEXTURE_2D, tex0 );
+        gl.enable(gl.GL_BLEND)
+        gl.blend_func(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.use_program(text_shader)
+        gl.uniform_matrix4fv(location_mtx, 1, true, ortho_mtx)
+        gl.uniform1f(location_anim, t);
+        gl.uniform1f(location_offset, t);
+        gl.uniform1i(location_mode, 3);
+        gl.bind_texture(gl.GL_TEXTURE_2D, tex0);
 
         qb_begin(text_qb);
 
@@ -1791,35 +1490,32 @@ function run_floor()
 
         -- render logo
         if (logo_t > 100.0f) then
-            glUseProgram(screen_shader)
-            glBindTexture(GL_TEXTURE_2D, logo_tex)
-            location_mtx = glGetUniformLocation( screen_shader, "mtx")
-            glUniformMatrix4fv(location_mtx, 1, true, ortho_mtx);
+            gl.use_program(screen_shader)
+            gl.bind_texture(gl.GL_TEXTURE_2D, logo_tex)
+            location_mtx = gl.get_uniform_location(screen_shader, "mtx")
+            gl.uniform_matrix4fv(location_mtx, 1, true, ortho_mtx);
             local logo_scale = 0.3f
             qb_begin(logo_qb)
-            qb_add_centered(logo_qb, 400.0f, 100.0f, 1280.0f * logo_scale, 447.0f * logo_scale, 0.0f, 1.0f, 1.0f, 0.0f )
+            qb_add_centered(logo_qb, 400.0f, 100.0f, 1280.0f * logo_scale, 447.0f * logo_scale, 0.0f, 1.0f, 1.0f, 0.0f)
             qb_end(logo_qb)
             qb_render(logo_qb)
         end
 
         loop_end()
     end
-
 end
 
-function init_audio() : uint64
-    let system_ptr_wrap = Wrap<uint64>{}
-    if FMOD_System_Create(system_ptr_wrap) ~= FMOD_OK then
-        log_error("could not create FMOD system")
-        return 0u64
-    end
-    let fmod_system = system_ptr_wrap.value
 
-    if (FMOD_System_Init(fmod_system, 32, 0u64, 0u64) ~= FMOD_OK) then
-        log_error("could not init FMOD")
-        return 0u64
+function init_audio(): fmod.System
+    let sys_create_res = fmod.system_create()
+    if sys_create_res.0 ~= fmod.OK then
+        panic("could not create FMOD system")
     end
-    -- io.println(apa[0].ptr[0])
+    let fmod_system = sys_create_res.1
+
+    if fmod_system.init(32, 0u64, 0u64) ~= fmod.OK then
+        panic("could not initialize FMOD")
+    end
 
     log_ok("FMOD initiated")
 
@@ -1827,31 +1523,23 @@ function init_audio() : uint64
 end
 
 
-function load_sound( fmod_system : uint64, path : String ) : uint64
-    local sound_ptr_wrap = Wrap<uint64>{}
-    local res : uint64 = FMOD_System_CreateSound( fmod_system, path, 0x40u64, 0u64, sound_ptr_wrap)
+function load_sound(fmod_system: fmod.System, path: String): fmod.Sound
+    local sound_result = fmod_system.create_sound(path, 0x40u64, 0u64)
 
-    if (res ~= FMOD_OK) then
-        log_error("(" .. path .. ") could not create sound: ")
---        io.println(res)
-        -- log_error("(" .. path .. ") could not create sound: " .. FMOD_ErrorString(res))
-        return 0u64
+    if sound_result.0 ~= fmod.OK then
+        panic("could not create sound: " .. path)
     end
 
-    local sound_ptr = sound_ptr_wrap.value
-
-    return sound_ptr
+    return sound_result.1
 end
 
-function play_sound(fmod_system : uint64, fmod_sound : uint64) : uint64
-    local channel_ptr_wrap = Wrap<uint64>{}
-    local res : uint64 = FMOD_System_PlaySound(fmod_system, -1, fmod_sound, false, channel_ptr_wrap)
-    if res ~= FMOD_OK then
-        log_error("could not play sound: ")
-        --        io.println(res)
-        -- log_error("(" .. path .. ") could not create sound: " .. FMOD_ErrorString(res))
+
+function play_sound(fmod_system: fmod.System, fmod_sound: fmod.Sound): fmod.Channel
+    local play_res = fmod_system.play_sound(-1, fmod_sound, false)
+    if play_res.0 ~= fmod.OK then
+        panic("could not play sound")
     end
-    return channel_ptr_wrap.value;
+    return play_res.1;
 end
 
 local line1: String = "SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL \x03 SOL"
