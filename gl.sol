@@ -2,6 +2,9 @@ module gl
 
 import matrix
 
+type Buffer = uint32
+
+
 let GL_FALSE: uint32 = 0x0u32
 let GL_TRUE: uint32 = 0x1u32
 
@@ -24,13 +27,24 @@ let GL_ONE_MINUS_SRC_ALPHA : uint32 = 0x0303u32
 let GL_DST_ALPHA           : uint32 = 0x0304u32
 let GL_ONE_MINUS_DST_ALPHA : uint32 = 0x0305u32
 
-let GL_FRAGMENT_SHADER  : uint32 = 0x8B30u32
-let GL_VERTEX_SHADER    : uint32 = 0x8B31u32
+type ShaderType = uint32
+
+let FRAGMENT_SHADER: ShaderType = ShaderType{ 0x8B30 }
+let VERTEX_SHADER: ShaderType = ShaderType{ 0x8B31 }
 
 let GL_INFO_LOG_LENGTH  : uint32 = 0x8B84u32
 
-let GL_ARRAY_BUFFER     : uint32 = 0x8892u32
-let GL_STATIC_DRAW      : uint32 = 0x88E4u32
+
+type Target = uint32
+
+let ARRAY_BUFFER: Target = Target{ 0x8892 }
+
+
+type Usage = uint32
+
+let STATIC_DRAW: Usage = Usage{ 0x88E4 }
+
+
 let GL_TRIANGLES        : uint32 = 0x0004u32
 
 let GL_TEXTURE_2D       : uint32 = 0x0DE1u32
@@ -52,6 +66,7 @@ let GL_DEPTH_COMPONENT   : uint32 = 0x1902u32
 let GL_DEPTH_ATTACHMENT  : uint32 = 0x8D00u32
 let GL_COLOR_ATTACHMENT0 : uint32 = 0x8CE0u32
 let GL_FRAMEBUFFER_COMPLETE : uint32 = 0x8CD5u32
+
 
 local struct Wrap<T>
     local value: T
@@ -79,9 +94,8 @@ extern disable(cap: uint32)
 !symbol("glBlendFunc") !nogc
 extern blend_func(sfactor: uint32, dfactor: uint32)
 
--- OGL: Shaders
 !symbol("glCreateShader") !nogc
-extern create_shader(shaderType: uint32): uint32
+extern create_shader(shaderType: ShaderType): uint32
 
 !symbol("glCreateProgram") !nogc
 extern create_program(): uint32
@@ -132,20 +146,19 @@ extern uniform1i(location: int, v0: int)
 extern uniform_matrix4fv(location: int, count: int, transpose: bool, value: matrix.Matrix)
 
 
--- OGL: Geometry
 !symbol("glGenBuffers") !nogc
 local extern gen_buffers(n: int, buffers: Wrap<uint32>)
 
-fn gen_buffer(): uint32
+fn gen_buffer(): Buffer
     let buffer = Wrap<uint32>{}
     gen_buffers(1, buffer)
-    return buffer.value
+    return Buffer{buffer.value}
 end
 
 !symbol("glGenBuffers") !nogc
-local extern gen_buffers(n: int, buffers: [uint32])
+local extern gen_buffers(n: int, buffers: [Buffer])
 
-fn gen_buffers(buffers: [uint32])
+fn gen_buffers(buffers: [Buffer])
     gen_buffers(#buffers, buffers)
 end
 
@@ -159,16 +172,20 @@ fn gen_vertex_array(): uint32
 end
 
 !symbol("glBindBuffer") !nogc
-extern bind_buffer(target: uint32, buffer: uint32)
+extern bind_buffer(target: Target, buffer: Buffer)
 
 !symbol("glBindVertexArray") !nogc
 extern bind_vertex_array(array: uint32)
 
 !symbol("glBufferData") !nogc
-extern buffer_data(target: uint32, size: int, data: [float], usage: uint32)
+local extern ext_buffer_data(target: Target, size: int, data: [float], usage: Usage)
+
+fn buffer_data(target: Target, size: int, data: [float], usage: Usage)
+    ext_buffer_data(target, size * 4, data, usage)
+end
 
 !symbol("glBufferData") !nogc
-extern buffer_data(target: uint32, size: int, data: [byte], usage: uint32)
+extern buffer_data(target: Target, size: int, data: [byte], usage: Usage)
 
 !symbol("glDrawArrays") !nogc
 extern draw_arrays(mode: uint32, first: uint32, count: int)

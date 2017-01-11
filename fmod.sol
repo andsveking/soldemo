@@ -7,8 +7,7 @@ fn system_create(): {Result, System}
 end
 
 
-typealias local sys: handle as System where
-
+type System = handle where
     fn init(maxchannels: int, flags: uint64, extradriverdata: uint64): Result
         let res = system_init(self, maxchannels, flags, extradriverdata)
         return Result { res }
@@ -25,22 +24,19 @@ typealias local sys: handle as System where
         let play_result = system_play_sound(self, channelid, sound, paused, channel)
         return {Result{play_result}, Channel{channel.value}}
     end
-
 end
 
 
-typealias local res: uint64 as Result
+type Result = uint64
 
-typealias local sound: handle as Sound
+type Sound = handle
 
-typealias local channel: handle as Channel where
-
+type Channel = handle where
     fn get_position(timeunit: uint64): uint32
         let tm = Wrap<uint32>{}
         channel_get_position(self, tm, 1u64)
         return tm.value
     end
-
 end
 
 
@@ -143,11 +139,11 @@ let ERR_MUSIC_NOTFOUND: Result = Result{ 94u64 }
 let ERR_MUSIC_NOCALLBACK: Result = Result{ 95u64 }
 
 fn == (a: Result, b: Result): bool
-    return a.res == b.res
+    return a.alias == b.alias
 end
 
 fn ~= (a: Result, b: Result): bool
-    return a.res ~= b.res
+    return a.alias ~= b.alias
 end
 
 
