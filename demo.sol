@@ -3,6 +3,7 @@ module demo
 require io
 require math
 require rnd
+require C
 
 require glfw
 require gl
@@ -24,12 +25,12 @@ fn main(args:[String]): int
 
     -- get a ogl >= 3.2 context on OSX
     -- lets us use layout(location = x)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3u32)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 2u32)
-    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 2)
+    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, 1)
     glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
-    window = glfw.create_window(800, 600, "sol", 0u64, 0u64)
+    window = glfw.create_window(800, 600, "sol")
     window.make_context_current()
 
     if window.is_valid() then
@@ -41,7 +42,7 @@ fn main(args:[String]): int
 
         run_floor()
     else
-        io.println("could not create window!")
+        panic("could not create window!")
     end
 
     -- release scenes
@@ -53,7 +54,7 @@ end
 
 
 ------------------------------------------------------------------
--- Structs
+-- QuadBatch
 
 struct QuadBatch
     vert_buf: [float]
@@ -65,6 +66,38 @@ struct QuadBatch
     vert_gl: gl.Buffer
     uv_gl: gl.Buffer
     vao: uint32
+
+
+    fn start()
+        self.cursor = 0
+    end
+
+    fn finish()
+        let i = self.cursor*3*6
+
+        gl.bind_vertex_array(self.vao)
+
+        gl.enable_vertex_attrib_array(0)
+        gl.bind_buffer(gl.ARRAY_BUFFER, self.vert_gl)
+        check_error("qb_render: binding vert buffer", false)
+        gl.buffer_data(gl.ARRAY_BUFFER, i, self.vert_buf, gl.STATIC_DRAW)
+        check_error("qb_render: upload vert buffer", false)
+        gl.vertex_attrib_pointer(0u32, 3u32, gl.FLOAT, false, 0, C.uintptr(0u32))
+
+        gl.enable_vertex_attrib_array(1)
+        gl.bind_buffer(gl.ARRAY_BUFFER, self.uv_gl)
+        check_error("qb_render: binding uv buffer", false)
+        gl.buffer_data(gl.ARRAY_BUFFER, i, self.uv_buf, gl.STATIC_DRAW)
+        check_error("qb_render: upload uv buffer", false)
+        gl.vertex_attrib_pointer(1u32, 2u32, gl.FLOAT, false, 0, C.uintptr(0u32))
+
+        gl.bind_vertex_array(0u32)
+    end
+
+    fn render()
+        gl.bind_vertex_array(self.vao)
+        gl.draw_arrays(gl.GL_TRIANGLES, 0u32, self.cursor*6);
+    end
 end
 
 
@@ -133,26 +166,23 @@ fn check_error(id: String, print_on_ok: bool): bool
 end
 
 
-fn shader_log(obj: uint32)
-    local size:[int] = [200:int]
-    if gl.is_shader(obj) then
-        gl.get_shaderiv(obj, gl.GL_INFO_LOG_LENGTH, size)
-    else
-        gl.get_programiv(obj, gl.GL_INFO_LOG_LENGTH, size)
-    end
-    if size[0] == 0 then
+fn shader_log(obj: gl.Shader)
+    let size = gl.get_shaderiv(obj, gl.SP_INFO_LOG_LENGTH)
+    if size == 0 then
         return
     end
+    let log = gl.get_shader_info_log(obj, size as uint32)
+    io.println("Shader log:\n" .. log)
+end
 
-    local sub_sizes:[int] = [1:int]
-    local data:[byte] = [size[0]:byte]
-    if gl.is_shader(obj) then
-        gl.get_shader_info_log(obj, size[0], sub_sizes, data)
-    else
-        gl.get_program_info_log(obj, size[0], sub_sizes, data)
+
+fn program_log(obj: gl.Program)
+    let size = gl.get_programiv(obj, gl.PP_INFO_LOG_LENGTH)
+    if size == 0 then
+        return
     end
-
-    io.println("Shader log:\n" .. string(data))
+    let log = gl.get_program_info_log(obj, size as uint32)
+    io.println("Shader log:\n" .. log)
 end
 
 
@@ -197,7 +227,7 @@ fn create_texture(width: int, height: int, data: [byte]): uint32
     gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
     gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
 
-    gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, data)
+    gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.UNSIGNED_BYTE, data)
     check_error("uploaded texture data", true)
 
     gl.bind_texture(gl.GL_TEXTURE_2D, 0u32)
@@ -217,7 +247,7 @@ fn create_empty_texture(width: int, height: int): uint32
     gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
     gl.tex_parameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
 
-    gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, 0u32)
+    gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.UNSIGNED_BYTE, 0u32)
     check_error("upload empty texture", true)
 
     gl.bind_texture(gl.GL_TEXTURE_2D, 0u32)
@@ -290,42 +320,10 @@ fn create_quad_batch(capacity: int): QuadBatch
     gl.bind_vertex_array(qb.vao)
     gl.enable_vertex_attrib_array(0)
     gl.bind_buffer(gl.ARRAY_BUFFER, qb.vert_gl)
-    gl.vertex_attrib_pointer(0u32, 3, gl.GL_FLOAT, false, 0, 0)
+    gl.vertex_attrib_pointer(0u32, 3u32, gl.FLOAT, false, 0, C.uintptr(0u32))
     gl.bind_vertex_array(0u32)
 
     return qb
-end
-
-fn qb_begin(qb: QuadBatch)
-    qb.cursor = 0
-end
-
-fn qb_end(qb: QuadBatch)
-    let i = qb.cursor*3*6
-
-    gl.bind_vertex_array(qb.vao)
-
-    gl.enable_vertex_attrib_array(0)
-    gl.bind_buffer(gl.ARRAY_BUFFER, qb.vert_gl)
-    check_error("qb_render: binding vert buffer", false)
-    gl.buffer_data(gl.ARRAY_BUFFER, i, qb.vert_buf, gl.STATIC_DRAW)
-    check_error("qb_render: upload vert buffer", false)
-    gl.vertex_attrib_pointer(0u32, 3, gl.GL_FLOAT, false, 0, 0)
-
-    gl.enable_vertex_attrib_array(1)
-    gl.bind_buffer(gl.ARRAY_BUFFER, qb.uv_gl)
-    check_error("qb_render: binding uv buffer", false)
-    gl.buffer_data(gl.ARRAY_BUFFER, i, qb.uv_buf, gl.STATIC_DRAW)
-    check_error("qb_render: upload uv buffer", false)
-    gl.vertex_attrib_pointer(1u32, 2, gl.GL_FLOAT, false, 0, 0)
-
-    gl.bind_vertex_array(0u32)
-end
-
-
-fn qb_render(qb: QuadBatch)
-    gl.bind_vertex_array(qb.vao)
-    gl.draw_arrays(gl.GL_TRIANGLES, 0u32, qb.cursor*6);
 end
 
 
@@ -511,72 +509,27 @@ fn qb_add_3d(qb: QuadBatch, x0: float, y0: float, x1: float, y1: float, u0: floa
 
 end
 
-fn qb_add_centered(qb: QuadBatch, x: float, y: float, w: float, h: float, u0: float, v0: float, u1: float, v1: float)
 
+fn qb_add_centered(qb: QuadBatch, x: float, y: float, w: float, h: float, u0: float, v0: float, u1: float, v1: float)
     local wh = w / 2.0f
     local hh = h / 2.0f
     qb_add(qb, x - wh, y - hh, x + wh, y + hh, u0, v0, u1, v1)
-
 end
 
 
-fn create_quad(): uint32
-    local buffer = gl.gen_buffer()
-    check_error("creating geo buffers", true)
-
-    gl.bind_buffer(gl.ARRAY_BUFFER, buffer)
-    check_error("binding geo buffers", true)
-
-    local data = [12:float]
-    data[0] = -1.0f
-    data[1] = -1.0f
-
-    data[2] =  1.0f
-    data[3] = -1.0f
-
-    data[4] =  1.0f
-    data[5] =  1.0f
-
-    data[6] = -1.0f
-    data[7] = -1.0f
-
-    data[8] =  1.0f
-    data[9] =  1.0f
-
-    data[10] = -1.0f
-    data[11] =  1.0f
-
-    gl.buffer_data(gl.ARRAY_BUFFER, 6*2, data, gl.STATIC_DRAW)
-    check_error("loading geo buffers", true)
-
-    let vao = gl.gen_vertex_array();
-    gl.bind_vertex_array(vao);
-
-    gl.enable_vertex_attrib_array(0)
-    gl.bind_buffer(gl.ARRAY_BUFFER, buffer)
-    gl.vertex_attrib_pointer(0u32, 2, gl.GL_FLOAT, false, 0, 0);
-
-    return vao
-end
-
-
-fn create_shader(vert_src: String, frag_src: String): uint32
-    local vert = gl.create_shader(gl.VERTEX_SHADER)
-    local frag = gl.create_shader(gl.FRAGMENT_SHADER)
-    local shader = gl.create_program()
+fn create_shader(vert_src: String, frag_src: String): gl.Program
+    let vert = gl.create_shader(gl.VERTEX_SHADER)
+    let frag = gl.create_shader(gl.FRAGMENT_SHADER)
+    let shader = gl.create_program()
     check_error("create programs", true)
 
-    local a: [String] = [1:String]
-    a[0] = vert_src
-    gl.shader_source(vert, 1u64, a, 0u32)
+    gl.shader_source(vert, vert_src)
     check_error("shader vert source", true)
     gl.compile_shader(vert)
     check_error("shader vert compile", true)
     shader_log(vert)
 
-    local a: [String] = [1:String]
-    a[0] = frag_src
-    gl.shader_source(frag, 1u64, a, 0u32)
+    gl.shader_source(frag, frag_src)
     check_error("shader frag source", true)
     gl.compile_shader(frag)
     check_error("shader frag compile", true)
@@ -589,7 +542,7 @@ fn create_shader(vert_src: String, frag_src: String): uint32
 
     gl.link_program(shader)
     check_error("shader link", true)
-    shader_log(shader)
+    program_log(shader)
 
     return shader
 end
@@ -981,13 +934,13 @@ fn update_meshy_cube(ps: ParticleSystem, qb: QuadBatch, delta: float)
     end
 
     -- render!!!
-    qb_begin(qb)
+    qb.start()
     for particle in ps.particle_buf do
         let pos_z = particle.pos.z
         let zzzz = vector.vec4(pos_z, pos_z, pos_z, pos_z)
         qb_add_3d(qb, particle.pos.x - 5f, particle.pos.y - 5f, particle.pos.x + 5.0f, particle.pos.y + 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, zzzz)
     end
-    qb_end(qb)
+    qb.finish()
 end
 
 
@@ -995,8 +948,7 @@ end
 -- scenes??
 
 let particle_amount: int = MAX_PARTICLE_COUNT
-local particle_shader: uint32
-local mesh_shader: uint32
+local particle_shader: gl.Program
 local particle_qb: QuadBatch
 local particle_loc_mtx: int
 
@@ -1029,12 +981,12 @@ fn scene_particle_draw(window: glfw.Window, mtx: matrix.Matrix, delta: float)
 
     gl.use_program(particle_shader)
     gl.uniform_matrix4fv(particle_loc_mtx, 1, true, mtx)
-    qb_render(particle_qb)
+    particle_qb.render()
 end
 
 
 fn loop_begin(): bool
-    return window.window_should_close()
+    return not window.window_should_close()
 end
 
 
@@ -1053,7 +1005,7 @@ let floordata: [@HF] = [2: @HF]
 local music_channel: fmod.Channel
 
 fn gen_floor(qb: QuadBatch, gridsize: int)
-    qb_begin(qb);
+    qb.start();
     local uvs = 1.0f / gridsize as float
     for u=0, gridsize-1 do
         local x:float = u as float - 0.5f * gridsize as float
@@ -1062,7 +1014,7 @@ fn gen_floor(qb: QuadBatch, gridsize: int)
             qb_add(qb, x, y, x + 1.0f, y + 1.0f, uvs*u as float, uvs*v as float, uvs*(u+1) as float, uvs*(v+1) as float)
         end
     end
-    qb_end(qb)
+    qb.finish()
 end
 
 
@@ -1099,20 +1051,20 @@ fn run_floor()
     local logo_tex = create_texture(1280, 447, logo_data)
     local logo_qb = create_quad_batch(12)
 
-    local vertex_src = read_file_as_string("data/shaders/floor.vp")
-    local fragment_src = read_file_as_string("data/shaders/floor.fp")
+    let vertex_src = read_file_as_string("data/shaders/floor.vp")
+    let fragment_src = read_file_as_string("data/shaders/floor.fp")
     local floor_shader = create_shader(vertex_src, fragment_src);
     check_error("(floor) create shader", false);
 
     -- voxel
-    vertex_src  = read_file_as_string("data/shaders/voxel.vp")
-    fragment_src  = read_file_as_string("data/shaders/voxel.fp")
+    let vertex_src  = read_file_as_string("data/shaders/voxel.vp")
+    let fragment_src  = read_file_as_string("data/shaders/voxel.fp")
     let voxel_shader = create_shader(vertex_src, fragment_src)
     let voxel_qb = create_quad_batch(1024*1024);
 
     --- text
-    vertex_src  = read_file_as_string("data/shaders/shader.vp")
-    fragment_src  = read_file_as_string("data/shaders/shader.fp")
+    let vertex_src  = read_file_as_string("data/shaders/shader.vp")
+    let fragment_src  = read_file_as_string("data/shaders/shader.fp")
     let text_shader = create_shader(vertex_src, fragment_src)
     check_error("(text) create shader", false)
     let text_qb = create_quad_batch(1024)
@@ -1131,10 +1083,9 @@ fn run_floor()
     let tex0 = create_texture(256, 256, tex0_data)
 
     -- FBO stuff
-    vertex_src  = read_file_as_string("data/shaders/screen.vp")
-    fragment_src  = read_file_as_string("data/shaders/screen.fp")
+    let vertex_src  = read_file_as_string("data/shaders/screen.vp")
+    let fragment_src  = read_file_as_string("data/shaders/screen.fp")
     let screen_shader = create_shader(vertex_src, fragment_src)
-    let screen_quad = create_quad()
 
     let htex = gl.gen_texture()
     gl.bind_texture(gl.GL_TEXTURE_2D, htex)
@@ -1147,6 +1098,8 @@ fn run_floor()
     local anim = 0.0f
 
     local last_time_stamp = glfw.get_time()
+    local frame_counter = 0
+    local last_fps_ts = last_time_stamp
     local start_time = last_time_stamp
     local to_water:float = 0.0f
     local water_t:float = 0.0f
@@ -1157,7 +1110,8 @@ fn run_floor()
     local psyk_t:float = 0.0f
     local next_switch = 0u64
 
-    local texdata = [65536: float]
+    let texdata = [65536: float]
+
 
     while loop_begin() do
         let width, height = window.get_framebuffer_size()
@@ -1166,6 +1120,13 @@ fn run_floor()
 
         local delta = (glfw.get_time() - last_time_stamp) as float
         last_time_stamp = glfw.get_time()
+
+        if last_time_stamp - last_fps_ts >= 1.0 then
+            let elapsed = last_time_stamp - last_fps_ts
+            last_fps_ts = last_time_stamp
+            io.println("FPS: " .. (frame_counter as double / elapsed))
+            frame_counter = 0
+        end
 
         let tm = music_channel.get_position(1u64)
 
@@ -1209,7 +1170,7 @@ fn run_floor()
 
         gl.viewport(0, 0, width, height)
         gl.clear_color(0.0f, 0.0f, 0.0f, 1.0f)
-        gl.clear(0x4100u32)
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.disable(gl.GL_BLEND)
         gl.enable(gl.GL_DEPTH_TEST)
         gl.disable(gl.GL_CULL_FACE)
@@ -1233,14 +1194,14 @@ fn run_floor()
            texdata[k] = 0.001f * floordata[cur].heights[k]
         end
 
-        gl.bind_texture(gl.GL_TEXTURE_2D, htex);
-        gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, 0, 0, 0, gl.GL_RED, gl.GL_FLOAT, texdata);
-        gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, floorsize, floorsize, 0, gl.GL_RED, gl.GL_FLOAT, texdata);
-        gl.uniform1f(water_fade, to_water);
-        gl.uniform1f(logo_fade, to_logo);
-        gl.uniform1f(water_time, water_t);
+        gl.bind_texture(gl.GL_TEXTURE_2D, htex)
+        gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, 0, 0, 0, gl.GL_RED, gl.FLOAT, texdata)
+        gl.tex_image2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, floorsize, floorsize, 0, gl.GL_RED, gl.FLOAT, texdata)
+        gl.uniform1f(water_fade, to_water)
+        gl.uniform1f(logo_fade, to_logo)
+        gl.uniform1f(water_time, water_t)
 
-        qb_render(fb)
+        fb.render()
         floor_sim(cur, 1 - cur)
         cur = 1 - cur
 
@@ -1249,7 +1210,7 @@ fn run_floor()
         local rot_mtx = imtx.rotate_X(t*1.1f);
         rot_mtx = rot_mtx.rotate_Z((t*0.7f))
 
-        local move = psyk_t;
+        local move = psyk_t
         if move > 1.0f then
            move = 1.0f;
         end
@@ -1335,10 +1296,10 @@ fn run_floor()
                                             matrix.multiply(matrix.scale(0.75f,0.75f,0.75f),
                                                             matrix.scale(13.3f,13.3f,13.3f)))))
 
-        qb_begin(voxel_qb)
+        voxel_qb.start()
         qb_write_plusbox(voxel_qb, logo_t - 0.3f)
-        qb_end(voxel_qb)
-        qb_render(voxel_qb)
+        voxel_qb.finish()
+        voxel_qb.render()
 
         gl.use_program(particle_shader)
         scene_particle_draw(window, camera, 0.1f)
@@ -1384,7 +1345,7 @@ fn run_floor()
         gl.uniform1i(location_mode, 3);
         gl.bind_texture(gl.GL_TEXTURE_2D, tex0);
 
-        qb_begin(text_qb);
+        text_qb.start();
 
         local pandown = (t - 10.0f);
         if pandown < 0.0f then
@@ -1401,8 +1362,8 @@ fn run_floor()
         local t3 = 4.0f * (t - 7.0f)
         qb_text_slam(text_qb, 100.0f, 200.0f - pandown, "SOL HAX", 200.0f, 100.0f, t3)
 
-        qb_end(text_qb)
-        qb_render(text_qb);
+        text_qb.finish()
+        text_qb.render();
 
         t = t + delta
 
@@ -1413,13 +1374,15 @@ fn run_floor()
             location_mtx = gl.get_uniform_location(screen_shader, "mtx")
             gl.uniform_matrix4fv(location_mtx, 1, true, ortho_mtx);
             local logo_scale = 0.3f
-            qb_begin(logo_qb)
+            logo_qb.start()
             qb_add_centered(logo_qb, 400.0f, 100.0f, 1280.0f * logo_scale, 447.0f * logo_scale, 0.0f, 1.0f, 1.0f, 0.0f)
-            qb_end(logo_qb)
-            qb_render(logo_qb)
+            logo_qb.finish()
+            logo_qb.render()
         end
 
         loop_end()
+
+        frame_counter += 1
     end
 end
 
