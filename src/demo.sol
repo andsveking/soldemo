@@ -65,8 +65,7 @@ struct QuadBatch
     -- gl stuff
     vert_gl: gl.Buffer
     uv_gl: gl.Buffer
-    vao: uint32
-
+    vao: gl.VertexArrayObject
 
     fn start()
         self.cursor = 0
@@ -80,23 +79,23 @@ struct QuadBatch
         gl.enable_vertex_attrib_array(0)
         gl.bind_buffer(gl.ARRAY_BUFFER, self.vert_gl)
         check_error("qb_render: binding vert buffer", false)
-        gl.buffer_data(gl.ARRAY_BUFFER, i, self.vert_buf, gl.STATIC_DRAW)
+        gl.buffer_data(gl.ARRAY_BUFFER, C.uintptr((i*4) as uint32), self.vert_buf as handle, gl.STATIC_DRAW)
         check_error("qb_render: upload vert buffer", false)
         gl.vertex_attrib_pointer(0u32, 3u32, gl.FLOAT, false, 0, C.uintptr(0u32))
 
         gl.enable_vertex_attrib_array(1)
         gl.bind_buffer(gl.ARRAY_BUFFER, self.uv_gl)
         check_error("qb_render: binding uv buffer", false)
-        gl.buffer_data(gl.ARRAY_BUFFER, i, self.uv_buf, gl.STATIC_DRAW)
+        gl.buffer_data(gl.ARRAY_BUFFER, C.uintptr((i*4) as uint32), self.uv_buf as handle, gl.STATIC_DRAW)
         check_error("qb_render: upload uv buffer", false)
         gl.vertex_attrib_pointer(1u32, 2u32, gl.FLOAT, false, 0, C.uintptr(0u32))
 
-        gl.bind_vertex_array(0u32)
+        gl.bind_vertex_array(gl.NULL_VAO)
     end
 
     fn render()
         gl.bind_vertex_array(self.vao)
-        gl.draw_arrays(gl.GL_TRIANGLES, 0u32, self.cursor*6);
+        gl.draw_arrays(gl.TRIANGLES, 0u32, self.cursor*6);
     end
 end
 
@@ -321,7 +320,7 @@ fn create_quad_batch(capacity: int): QuadBatch
     gl.enable_vertex_attrib_array(0)
     gl.bind_buffer(gl.ARRAY_BUFFER, qb.vert_gl)
     gl.vertex_attrib_pointer(0u32, 3u32, gl.FLOAT, false, 0, C.uintptr(0u32))
-    gl.bind_vertex_array(0u32)
+    gl.bind_vertex_array(gl.NULL_VAO)
 
     return qb
 end
@@ -950,7 +949,7 @@ end
 let particle_amount: int = MAX_PARTICLE_COUNT
 local particle_shader: gl.Program
 local particle_qb: QuadBatch
-local particle_loc_mtx: int
+local particle_loc_mtx: gl.Uniform
 
 
 fn scene_particle_init()

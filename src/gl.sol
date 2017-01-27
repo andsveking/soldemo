@@ -9,9 +9,14 @@ let TRUE: uint32 = 0x1u32
 
 type Type = uint32
 
-let FLOAT: Type = Type{ 0x1406 }
 let BYTE: Type = Type{ 0x1400 }
 let UNSIGNED_BYTE: Type = Type{ 0x1401 }
+let SHORT: Type = Type{ 0x1402 }
+let UNSIGNED_SHORT: Type = Type{ 0x1403 }
+let INT: Type = Type{ 0x1404 }
+let UNSIGNED_INT: Type = Type{ 0x1405 }
+let FLOAT: Type = Type{ 0x1406 }
+let DOUBLE: Type = Type{ 0x140A }
 
 let GL_BLEND: uint32 = 0x0BE2u32
 let GL_ALPHA_TEST: uint32 = 0x0BC0u32
@@ -42,15 +47,13 @@ end
 type Target = uint32
 
 let ARRAY_BUFFER: Target = Target{ 0x8892 }
+let ELEMENT_ARRAY_BUFFER: Target = Target{ 0x8893 }
 
 
 type Usage = uint32
 
 let STATIC_DRAW: Usage = Usage{ 0x88E4 }
 let STREAM_DRAW: Usage = Usage{ 0x88E0 }
-
-
-let GL_TRIANGLES        : uint32 = 0x0004u32
 
 let GL_TEXTURE_2D       : uint32 = 0x0DE1u32
 let GL_RGBA             : uint32 = 0x1908u32
@@ -215,23 +218,39 @@ fn get_program_info_log(program: Program, max_size: uint32): String
     return string(byte_buffer)
 end
 
+
+--
+-- UNIFORM
+--
+
+type Uniform = int where
+    fn is_valid(): bool
+        return self.alias ~= -1
+    end
+end
+
 !symbol("glGetUniformLocation") !nogc
-extern get_uniform_location(program: Program, name: String): int
+extern get_uniform_location(program: Program, name: String): Uniform
 
 !symbol("glUniform4fv") !nogc
-extern uniform4fv(location: int, count: int, value: [float])
+extern uniform4fv(location: Uniform, count: int, value: [float])
 
 !symbol("glUniform1f") !nogc
-extern uniform1f(location: int, v0: float)
+extern uniform1f(location: Uniform, value: float)
+
+!symbol("glUniform2f") !nogc
+extern uniform2f(location: Uniform, value1: float, value2: float)
 
 !symbol("glUniform1i") !nogc
-extern uniform1i(location: int, v0: int)
+extern uniform1i(location: Uniform, value: int)
 
 !symbol("glUniformMatrix4fv") !nogc
-extern uniform_matrix4fv(location: int, count: int, transpose: bool, value: matrix.Matrix)
+extern uniform_matrix4fv(location: Uniform, count: int, transpose: bool, value: matrix.Matrix)
 
 
-
+--
+-- BUFFER
+--
 
 !symbol("glGenBuffers") !nogc
 local extern gen_buffers(n: int, buffers: Ptr<uint32>)
@@ -249,11 +268,16 @@ fn gen_buffers(buffers: [Buffer])
     gen_buffers(#buffers, buffers)
 end
 
-!symbol("glGenVertexArrays") !nogc
-local extern gen_vertex_arrays(n: int, buffers: Ptr<uint32>)
 
-fn gen_vertex_array(): uint32
-    let buffer = Ptr<uint32>{}
+type VertexArrayObject = uint32
+
+let NULL_VAO: VertexArrayObject = VertexArrayObject{ 0u32 }
+
+!symbol("glGenVertexArrays") !nogc
+local extern gen_vertex_arrays(n: int, buffers: Ptr<VertexArrayObject>)
+
+fn gen_vertex_array(): VertexArrayObject
+    let buffer = Ptr<VertexArrayObject>{}
     gen_vertex_arrays(1, buffer)
     return buffer.value
 end
@@ -262,20 +286,34 @@ end
 extern bind_buffer(target: Target, buffer: Buffer)
 
 !symbol("glBindVertexArray") !nogc
-extern bind_vertex_array(array: uint32)
+extern bind_vertex_array(vao: VertexArrayObject)
 
 !symbol("glBufferData") !nogc
-local extern ext_buffer_data(target: Target, size: int, data: [float], usage: Usage)
+extern buffer_data(target: Target, size: C.uintptr, data: handle, usage: Usage)
 
-fn buffer_data(target: Target, size: int, data: [float], usage: Usage)
-    ext_buffer_data(target, size * 4, data, usage)
-end
+!symbol("glBufferSubData") !nogc
+extern buffer_sub_data(target: Target, offset: C.uintptr, size: C.uintptr, data: handle)
 
 !symbol("glBufferData") !nogc
 extern buffer_data(target: Target, size: int, data: [byte], usage: Usage)
 
+type Mode = uint32
+
+let POINTS: Mode = Mode{ 0x0000 }
+let LINES: Mode = Mode{ 0x0001 }
+let LINE_LOOP: Mode = Mode{ 0x0002 }
+let LINE_STRIP: Mode = Mode{ 0x0003 }
+let TRIANGLES: Mode = Mode{ 0x0004 }
+let TRIANGLE_STRIP: Mode = Mode{ 0x0005 }
+let TRIANGLE_FAN: Mode = Mode{ 0x0006 }
+let LINES_ADJACENCY: Mode = Mode{ 0x000A }
+let LINE_STRIP_ADJACENCY: Mode = Mode{ 0x000B }
+let TRIANGLES_ADJACENCY: Mode = Mode{ 0x000C }
+let TRIANGLE_STRIP_ADJACENCY: Mode = Mode{ 0x000D }
+let PATCHES: Mode = Mode{ 0x000E }
+
 !symbol("glDrawArrays") !nogc
-extern draw_arrays(mode: uint32, first: uint32, count: int)
+extern draw_arrays(mode: Mode, first: uint32, count: int)
 
 !symbol("glEnableVertexAttribArray") !nogc
 extern enable_vertex_attrib_array(index: int)
@@ -285,6 +323,9 @@ extern disable_vertex_attrib_array(index: int)
 
 !symbol("glVertexAttribPointer") !nogc
 extern vertex_attrib_pointer(index: uint32, size: uint32, typ: Type, normalized: bool, stride: int, pointer: C.uintptr)
+
+!symbol("glVertexAttribIPointer") !nogc
+extern vertex_attrib_i_pointer(index: uint32, size: uint32, typ: Type, normalized: bool, stride: int, pointer: C.uintptr)
 
 
 --
@@ -316,7 +357,7 @@ extern tex_parameteri(target: uint32, pname: uint32, param: uint32)
 
 
 --
--- BUFFER
+-- BUFFER (again?)
 --
 type Buffer = uint32
 
@@ -365,4 +406,3 @@ end
 
 !symbol("glCheckFramebufferStatus") !nogc
 extern check_framebuffer_status(target: uint32): uint32
-
