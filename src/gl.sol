@@ -18,10 +18,6 @@ let UNSIGNED_INT: Type = Type{ 0x1405 }
 let FLOAT: Type = Type{ 0x1406 }
 let DOUBLE: Type = Type{ 0x140A }
 
-let GL_BLEND: uint32 = 0x0BE2u32
-let GL_ALPHA_TEST: uint32 = 0x0BC0u32
-let GL_DEPTH_TEST: uint32 = 0x0B71u32
-let GL_CULL_FACE: uint32 = 0x0B44u32
 
 let GL_ZERO: uint32 = 0u32
 let GL_ONE: uint32 = 1u32
@@ -92,19 +88,94 @@ extern clear(mask: BufferMask)
 !symbol("glClearColor") !nogc
 extern clear_color(red: float, green: float, blue: float, alpha: float)
 
-!symbol("glEnable") !nogc
-extern enable(cap: uint32)
-
-!symbol("glDisable") !nogc
-extern disable(cap: uint32)
-
 !symbol("glBlendFunc") !nogc
 extern blend_func(sfactor: uint32, dfactor: uint32)
 
 
 --
--- SHADER
+-- Capabilities
 --
+type Capability = uint32
+
+let ALPHA_TEST: Capability = Capability{ 0x0BC0 }
+let AUTO_NORMAL: Capability = Capability{ 0x0D80 }
+let BLEND: Capability = Capability{ 0x0BE2 }
+let CLIP_DISTANCE0: Capability = Capability{ 0x3000 }
+let CLIP_DISTANCE1: Capability = Capability{ 0x3001 }
+let CLIP_DISTANCE2: Capability = Capability{ 0x3002 }
+let CLIP_DISTANCE3: Capability = Capability{ 0x3003 }
+let CLIP_DISTANCE4: Capability = Capability{ 0x3004 }
+let CLIP_DISTANCE5: Capability = Capability{ 0x3005 }
+let CLIP_DISTANCE6: Capability = Capability{ 0x3006 }
+let CLIP_DISTANCE7: Capability = Capability{ 0x3007 }
+let COLOR_LOGIC_OP: Capability = Capability{ 0x0BF2 }
+let CULL_FACE: Capability = Capability{ 0x0B44 }
+let DEBUG_OUTPUT: Capability = Capability{ 0x92E0 }
+let DEBUG_OUTPUT_SYNCHRONOUS: Capability = Capability{ 0x8242 }
+let DEPTH_CLAMP: Capability = Capability{ 0x864F }
+let DEPTH_TEST: Capability = Capability{ 0x0B71 }
+let DITHER: Capability = Capability{ 0x0BD0 }
+let FRAMEBUFFER_SRGB: Capability = Capability{ 0x8DB9 }
+let LINE_SMOOTH: Capability = Capability{ 0x0B20 }
+let MULTISAMPLE: Capability = Capability{ 0x809D }
+let POLYGON_OFFSET_FILL: Capability = Capability{ 0x8037 }
+let POLYGON_OFFSET_LINE: Capability = Capability{ 0x2A02 }
+let POLYGON_OFFSET_POINT: Capability = Capability{ 0x2A01 }
+let POLYGON_SMOOTH: Capability = Capability{ 0x0B41 }
+let PRIMITIVE_RESTART: Capability = Capability{ 0x8F9D }
+let PRIMITIVE_RESTART_FIXED_INDEX: Capability = Capability{ 0x8D69 }
+let RASTERIZER_DISCARD: Capability = Capability{ 0x8C89 }
+let SAMPLE_ALPHA_TO_COVERAGE: Capability = Capability{ 0x809E }
+let SAMPLE_ALPHA_TO_ONE: Capability = Capability{ 0x809F }
+let SAMPLE_COVERAGE: Capability = Capability{ 0x80A0 }
+let SAMPLE_SHADING: Capability = Capability{ 0x8C36 }
+let SAMPLE_MASK: Capability = Capability{ 0x8E51 }
+let SCISSOR_TEST: Capability = Capability{ 0x0C11 }
+let STENCIL_TEST: Capability = Capability{ 0x0B90 }
+let TEXTURE_CUBE_MAP_SEAMLESS: Capability = Capability{ 0x884F }
+let PROGRAM_POINT_SIZE: Capability = Capability{ 0x8642 }
+
+!symbol("glEnable") !nogc
+extern enable(cap: Capability)
+
+!symbol("glIsEnabled") !nogc
+extern is_enabled(cap: Capability): bool
+
+!symbol("glDisable") !nogc
+extern disable(cap: Capability)
+
+
+--
+-- Cull
+--
+
+type CullMode = uint32
+
+let FRONT: CullMode = CullMode{ 0x0404 }
+let BACK: CullMode = CullMode{ 0x0405 }
+let FRONT_AND_BACK: CullMode = CullMode{ 0x0405 }
+
+!symbol("glCullFace") !nogc
+extern cull_face(mode: CullMode)
+
+
+--
+-- Front Face
+--
+
+type FrontFaceMode = uint32
+
+let CW: FrontFaceMode = FrontFaceMode{ 0x0900 }
+let CCW: FrontFaceMode = FrontFaceMode{ 0x0901 }
+
+!symbol("glFrontFace") !nogc
+extern front_face(mode: FrontFaceMode)
+
+
+--
+-- Shader
+--
+
 type Program = uint32
 type Shader = uint32
 type ShaderType = uint32

@@ -972,8 +972,8 @@ fn scene_particle_draw(window: glfw.Window, mtx: matrix.Matrix, delta: float)
 
     local deltaf = delta
 
-    gl.disable(gl.GL_DEPTH_TEST)
-    gl.enable(gl.GL_BLEND)
+    gl.disable(gl.DEPTH_TEST)
+    gl.enable(gl.BLEND)
     gl.blend_func(gl.GL_ONE, gl.GL_ONE)
 
     update_meshy_cube(test_psys, particle_qb, delta)
@@ -1170,9 +1170,9 @@ fn run_floor()
         gl.viewport(0, 0, width, height)
         gl.clear_color(0.0f, 0.0f, 0.0f, 1.0f)
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        gl.disable(gl.GL_BLEND)
-        gl.enable(gl.GL_DEPTH_TEST)
-        gl.disable(gl.GL_CULL_FACE)
+        gl.disable(gl.BLEND)
+        gl.enable(gl.DEPTH_TEST)
+        gl.disable(gl.CULL_FACE)
 
         local dolly = logo_t * 0.9f
         if dolly > 1.0f then
@@ -1326,7 +1326,7 @@ fn run_floor()
         end
 
         ----- TEXt
-        gl.disable(gl.GL_DEPTH_TEST);
+        gl.disable(gl.DEPTH_TEST);
 
         local ortho_mtx = matrix.ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.0f, 1.0f)
         local location_mtx = gl.get_uniform_location(text_shader, "mtx")
@@ -1335,7 +1335,7 @@ fn run_floor()
         local location_mode = gl.get_uniform_location(text_shader, "mode")
         check_error("getting locations", false)
 
-        gl.enable(gl.GL_BLEND)
+        gl.enable(gl.BLEND)
         gl.blend_func(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.use_program(text_shader)
         gl.uniform_matrix4fv(location_mtx, 1, true, ortho_mtx)
